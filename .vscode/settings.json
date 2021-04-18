@@ -1,0 +1,21 @@
+{
+	"files.associations": {
+		"utility": "cpp",
+		"type_traits": "cpp",
+		"array": "cpp",
+		"cmath": "cpp",
+		"compare": "cpp",
+		"concepts": "cpp",
+		"cstdarg": "cpp",
+		"cstdio": "cpp",
+		"cstdlib": "cpp",
+		"exception": "cpp",
+		"tuple": "cpp",
+		"initializer_list": "cpp",
+		"limits": "cpp",
+		"new": "cpp",
+		"*.tcc": "cpp",
+		"cstdint": "cpp",
+		"typeinfo": "cpp"
+	}
+}
