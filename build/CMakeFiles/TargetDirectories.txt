@@ -1,5 +1,0 @@
-/home/ink/dev/CXX/VecMath/build/CMakeFiles/rebuild_cache.dir
-/home/ink/dev/CXX/VecMath/build/CMakeFiles/edit_cache.dir
-/home/ink/dev/CXX/VecMath/build/CMakeFiles/TEST.dir
-/home/ink/dev/CXX/VecMath/build/src/CMakeFiles/rebuild_cache.dir
-/home/ink/dev/CXX/VecMath/build/src/CMakeFiles/edit_cache.dir

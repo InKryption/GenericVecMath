@@ -32,7 +32,9 @@ get(Test const& t) {
 
 int main([[maybe_unused]]int argc, [[maybe_unused]]const char* argv[]) {
 	
-	constexpr auto m = ink::vec_math::z_of(std::make_tuple(1,2));
+	auto&& m = ink::vec_math::x_of(Test());
+	
+	
 	
 	return 0;
 }
