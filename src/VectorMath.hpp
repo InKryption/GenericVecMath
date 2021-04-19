@@ -7,62 +7,299 @@ namespace ink::vec_math {
 	
 	namespace detail {
 		
-		template<typename T, size_t Idx>
-		struct Conditional_Type
-		{ using type = void; };
+		static constexpr
+		size_t	X = {	0		},
+				Y = {	X + 1	},
+				Z = {	Y + 1	}
+		;
 		
-		template<typename T, size_t Idx> requires requires(T t) { get<Idx>(t); }
-		struct Conditional_Type<T, Idx>
-		{ using type = decltype(get<Idx>(std::declval<T>())); };
+		template<	size_t X = detail::X,
+					size_t Y = X + 1,
+					size_t Z = Y + 1	>
+		struct Axies {};
 		
-		template<typename T, size_t Idx>
-		requires	requires(T			t) { get<Idx>(t); }
-		||			requires(T &		t) { get<Idx>(t); }
-		||			requires(T &&		t) { get<Idx>(t); }
-		||			requires(T const&	t) { get<Idx>(t); }
-		struct AxisAPI {
-			using Val_Ret	=	typename Conditional_Type<T			,	Idx>::	type;
-			using Ref_Ret	=	typename Conditional_Type<T &		,	Idx>::	type;
-			using Rval_Ret	=	typename Conditional_Type<T &&		,	Idx>::	type;
-			using Cref_Ret	=	typename Conditional_Type<T const&	,	Idx>::	type;
+		template<typename axies = Axies<>> struct get_impl;
+		
+		template<size_t X, size_t Y, size_t Z, template<auto...> typename axies>
+		struct get_impl<axies<X, Y, Z>> {
 			
-			static constexpr Ref_Ret get_fwd(T & t)
-			requires( !std::same_as<Ref_Ret, void> )
-			{ return get<Idx>(std::forward<T&>(t)); }
+			template<size_t i> static constexpr size_t
+			equiv() noexcept
+			{
+				if constexpr(i == detail::X) return X;
+				if constexpr(i == detail::Y) return Y;
+				if constexpr(i == detail::Z) return Z;
+			}
 			
-			static constexpr Rval_Ret get_fwd(T && t)
-			requires( !std::same_as<Rval_Ret, void> )
-			{ return get<Idx>(std::forward<T&&>(t)); }
-			
-			static constexpr Cref_Ret get_fwd(T const& t)
-			requires( !std::same_as<Cref_Ret, void> )
-			{ return get<Idx>(std::forward<T const&>(t)); }
+			template<size_t axis, typename T> static constexpr decltype(auto)
+			get_fwd(T&& v) noexcept
+			(noexcept(	get<equiv<axis>()>(	std::forward<T>(	std::declval<T>()	)	)	))
+			{ return	get<equiv<axis>()>(	std::forward<T>(	v					)	)	;}
 			
 		};
 		
-		// Specializations so that everything comes back to a T handle of everything
 		
-		template<typename T, size_t Idx> struct AxisAPI<T	const&,	Idx>: public AxisAPI<T, Idx> {};
-		template<typename T, size_t Idx> struct AxisAPI<T	&&,		Idx>: public AxisAPI<T, Idx> {};
-		template<typename T, size_t Idx> struct AxisAPI<T	&,		Idx>: public AxisAPI<T, Idx> {};
 		
-		template<typename T> static constexpr decltype(auto)
-		x_of(T&& v)
-		{ return AxisAPI<T, 0>::get_fwd(std::forward<T>(v)); }
+		template<size_t axis, typename axies = Axies<>, typename T> static constexpr decltype(auto)
+		get_fwd(T&& v) noexcept
+		(noexcept(	get_impl<axies>::template get_fwd<axis , T>(	std::forward<T>(	std::declval<T>()	)	)	))
+		{ return	get_impl<axies>::template get_fwd<axis , T>(	std::forward<T>(	v					)	)	;}
 		
-		template<typename T> static constexpr decltype(auto)
-		y_of(T&& v)
-		{ return AxisAPI<T, 1>::get_fwd(std::forward<T>(v)); }
 		
-		template<typename T> static constexpr decltype(auto)
-		z_of(T&& v)
-		{ return AxisAPI<T, 2>::get_fwd(std::forward<T>(v)); }
+		
+		template<typename axies = Axies<>, typename T> static constexpr decltype(auto)
+		x_of(T&& v) noexcept
+		(noexcept(	get_fwd<X , axies>(	std::forward<T>(	std::declval<T>()	)	)	))
+		{ return	get_fwd<X , axies>(	std::forward<T>(	v					)	)	;}
+		
+		template<typename axies = Axies<>, typename T> static constexpr decltype(auto)
+		y_of(T&& v) noexcept
+		(noexcept(	get_fwd<Y , axies>(	std::forward<T>(	std::declval<T>()	)	)	))
+		{ return	get_fwd<Y , axies>(	std::forward<T>(	v					)	)	;}
+		
+		template<typename axies = Axies<>, typename T> static constexpr decltype(auto)
+		z_of(T&& v) noexcept
+		(noexcept(	get_fwd<Z , axies>(	std::forward<T>(	std::declval<T>()	)	)	))
+		{ return	get_fwd<Z , axies>(	std::forward<T>(	v					)	)	;}
+		
+		
+		
+		template<typename T, size_t Idx, typename axies = Axies<>>
+		using get_type = decltype( get_fwd<Idx, axies, T>(std::forward<T>(std::declval<T>())) );
+		
+		template<typename T>
+		concept not_void = !std::same_as<T, void>;
+		
+		template<typename T, size_t Idx, typename axies = Axies<>>
+		concept valid_get =			requires(T t)
+		{ {get_fwd<Idx>(t)} -> not_void; };
+		
+		template<typename T, size_t Idx, typename axies = Axies<>>
+		concept valid_get_cref	=	bool {
+									(valid_get<T, Idx, axies>																)
+		&&							(std::	is_reference_v	<								get_type<T, Idx, axies>		>	)
+		&&							(std::	is_const_v		<	std::remove_reference_t<	get_type<T, Idx, axies>	>	>	)	};
+		
+		template<typename T, size_t Idx, typename axies = Axies<>>
+		concept valid_get_ref	=	bool {
+									(valid_get<T, Idx, axies>																)
+		&&							(std::	is_reference_v	<								get_type<T, Idx, axies>		>	)
+		&&							(!std::	is_const_v		<	std::remove_reference_t<	get_type<T, Idx, axies>	>	>	)	};
+		
+		
+		
+		template<typename X, typename Y, typename Z>
+		struct Vec_Impl;
+		
+		template<typename X, typename Y, typename Z>
+		requires( (alignof(X) >= alignof(Y)) && (alignof(X) >= alignof(Z)) && (alignof(Y) >= alignof(Z)) )
+		struct Vec_Impl<X, Y, Z>
+		{
+			constexpr
+			Vec_Impl() requires(std::is_default_constructible_v<X> && std::is_default_constructible_v<Y> && std::is_default_constructible_v<Z>):
+			x(), y(), z() {}
+			
+			constexpr
+			Vec_Impl(X && x, Y && y, Z&& z):
+			x(x), y(y), z(z) {}
+			
+			constexpr
+			Vec_Impl(X const& x, Y const& y, Z const& z):
+			x(x), y(y), z(z) {}
+			
+			X x; Y y; Z z;
+		};
+		
+		template<typename X, typename Y, typename Z>
+		requires( (alignof(X) > alignof(Y)) && (alignof(X) >= alignof(Z)) && (alignof(Y) < alignof(Z)) )
+		struct Vec_Impl<X, Y, Z>
+		{
+			constexpr
+			Vec_Impl() requires(std::is_default_constructible_v<X> && std::is_default_constructible_v<Y> && std::is_default_constructible_v<Z>):
+			x(), y(), z() {}
+			
+			constexpr
+			Vec_Impl(X && x, Y && y, Z&& z):
+			x(x), z(z), y(y) {}
+			
+			constexpr
+			Vec_Impl(X const& x, Y const& y, Z const& z):
+			x(x), z(z), y(y) {}
+			
+			X x; Z z; Y y;
+		};
+		
+		
+		
+		template<typename X, typename Y, typename Z>
+		requires( (alignof(X) <= alignof(Y)) && (alignof(X) >= alignof(Z)) && (alignof(Y) > alignof(Z)) )
+		struct Vec_Impl<X, Y, Z>
+		{
+			constexpr
+			Vec_Impl() requires(std::is_default_constructible_v<X> && std::is_default_constructible_v<Y> && std::is_default_constructible_v<Z>):
+			x(), y(), z() {}
+			
+			constexpr
+			Vec_Impl(X && x, Y && y, Z&& z):
+			y(y), x(x), z(z) {}
+			
+			constexpr
+			Vec_Impl(X const& x, Y const& y, Z const& z):
+			y(y), x(x), z(z) {}
+			
+			Y y; X x; Z z;
+		};
+		
+		template<typename X, typename Y, typename Z>
+		requires( (alignof(X) < alignof(Y)) && (alignof(X) < alignof(Z)) && (alignof(Y) > alignof(Z)) )
+		struct Vec_Impl<X, Y, Z>
+		{
+			constexpr
+			Vec_Impl() requires(std::is_default_constructible_v<X> && std::is_default_constructible_v<Y> && std::is_default_constructible_v<Z>):
+			x(), y(), z() {}
+			
+			constexpr
+			Vec_Impl(X && x, Y && y, Z&& z):
+			y(y), z(z), x(x) {}
+			
+			constexpr
+			Vec_Impl(X const& x, Y const& y, Z const& z):
+			y(y), z(z), x(x) {}
+			
+			Y y; Z z; X x;
+		};
+		
+		
+		
+		template<typename X, typename Y, typename Z>
+		requires( (alignof(X) >= alignof(Y)) && (alignof(X) < alignof(Z)) && (alignof(Y) < alignof(Z)) )
+		struct Vec_Impl<X, Y, Z>
+		{
+			constexpr
+			Vec_Impl() requires(std::is_default_constructible_v<X> && std::is_default_constructible_v<Y> && std::is_default_constructible_v<Z>):
+			x(), y(), z() {}
+			
+			constexpr
+			Vec_Impl(X && x, Y && y, Z&& z):
+			z(z), x(x), y(y) {}
+			
+			constexpr
+			Vec_Impl(X const& x, Y const& y, Z const& z):
+			z(z), x(x), y(y) {}
+			
+			Z z; X x; Y y;
+		};
+		
+		template<typename X, typename Y, typename Z>
+		requires( (alignof(X) < alignof(Y)) && (alignof(X) < alignof(Z)) && (alignof(Y) < alignof(Z)) )
+		struct Vec_Impl<X, Y, Z>
+		{
+			constexpr
+			Vec_Impl() requires(std::is_default_constructible_v<X> && std::is_default_constructible_v<Y> && std::is_default_constructible_v<Z>):
+			x(), y(), z() {}
+			
+			constexpr
+			Vec_Impl(X && x, Y && y, Z&& z):
+			z(z), y(y), x(x) {}
+			
+			constexpr
+			Vec_Impl(X const& x, Y const& y, Z const& z):
+			z(z), y(y), x(x) {}
+			
+			Z z; Y y; X x;
+		};
+		
+		
+		
+		template<typename X, typename Y = X, typename Z = Y>
+		struct Vec: public Vec_Impl<X, Y, Z> {
+			
+			public: constexpr
+			Vec() requires(std::is_default_constructible_v<Vec_Impl<X,Y,Z>>): Vec_Impl<X,Y,Z>()
+			{}
+			
+			public: constexpr
+			Vec(X x, Y y, Z z): Vec_Impl<X,Y,Z>(x, y, z)
+			{}
+			
+			private: template<typename axies = Axies<>>
+			struct Ctr;
+			
+			private: template<size_t _x, size_t _y, size_t _z, template<auto...> typename axies>
+			struct Ctr<axies<_x, _y, _z>> {
+				friend struct Vec;
+				
+				template<typename T> constexpr
+				operator T() const {
+					T out{};
+					if constexpr(valid_get_ref<T, detail::X, axies<_x, _y, _z>>) { x_of<axies<_x, _y, _z>>(out) = M_data->x; }
+					if constexpr(valid_get_ref<T, detail::Y, axies<_x, _y, _z>>) { y_of<axies<_x, _y, _z>>(out) = M_data->y; }
+					if constexpr(valid_get_ref<T, detail::Z, axies<_x, _y, _z>>) { z_of<axies<_x, _y, _z>>(out) = M_data->z; }
+					return out;
+				}
+				
+				private: Vec const*
+				M_data{nullptr};
+			};
+			
+			public: template<typename axies = Axies<>> constexpr auto
+			construct() const
+			{ Ctr<axies> ctr; ctr.M_data = this; return ctr; }
+			
+			public: template<typename T, typename axies = Axies<>> constexpr
+			operator T() const
+			{ return construct<axies>(); }
+			
+			
+		};
+		
+		template<size_t axis, typename X, typename Y, typename Z> static constexpr auto&&
+		get(Vec<X, Y, Z> const& v) {
+			if constexpr(axis == detail::X) { return v.x; }
+			if constexpr(axis == detail::Y) { return v.y; }
+			if constexpr(axis == detail::Z) { return v.z; }
+		}
+		
+		template<size_t axis, typename X, typename Y, typename Z> static constexpr auto&&
+		get(Vec<X, Y, Z> && v) {
+			if constexpr(axis == detail::X) { return v.x; }
+			if constexpr(axis == detail::Y) { return v.y; }
+			if constexpr(axis == detail::Z) { return v.z; }
+		}
+		
+		template<size_t axis, typename X, typename Y, typename Z> static constexpr auto&&
+		get(Vec<X, Y, Z> & v) {
+			return get<axis>(std::move(v));
+		}
+		
+		
+		
+		//template<
+		//	typename axies_Lhs,
+		//	typename axies_Rhs = axies_Lhs,
+		//	size_t axis_Lhs,
+		//	size_t axis_Rhs = axis_Lhs,
+		//	valid_get<axis_Lhs, axies_Lhs> Lhs,
+		//	valid_get<axis_Rhs, axies_Rhs> Rhs
+		//> static constexpr decltype(auto)
+		//add(Lhs&& lhs, Rhs&& rhs) {
+			
+		//}
+		
 		
 	}
+	
+	using detail::X;
+	using detail::Y;
+	using detail::Z;
+	
+	using detail::Axies;
 	
 	using detail::x_of;
 	using detail::y_of;
 	using detail::z_of;
+	
+	using detail::Vec;
 	
 }
 
