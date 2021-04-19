@@ -31,10 +31,15 @@ get(Test const& t) {
 	if constexpr(Idx == 2) return t.z;
 }
 
+auto test(void) {
+	
+}
+
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
-	constexpr ink::detail::Vec<int, char, int> test;
+	constexpr int i = 3;
 	
+	constexpr ink::detail::Vec<int, char, int> f{};
 	
 	return 0;
 }

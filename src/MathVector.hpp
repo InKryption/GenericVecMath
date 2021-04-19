@@ -2,7 +2,7 @@
 #define INK_MATH_VECTOR_HEADER_FILE_GUARD
 
 #include <cstdlib>
-#include <type_traits>
+#include <concepts>
 
 namespace ink {
 	
@@ -11,93 +11,76 @@ namespace ink {
 		template<typename X, typename Y, typename Z>
 		struct Vec_Impl;
 		
-		template<typename X, typename Y, typename Z> requires( alignof(X) >= alignof(Y) && alignof(Y) >= alignof(Z) && alignof(X) >= alignof(Z) )
+		template<typename X, typename Y, typename Z> requires(	(alignof(X)	>=	alignof(Y))	&&	(alignof(Y)	>=	alignof(Z))	&&	(alignof(X)	>=	alignof(Z))	)
 		struct Vec_Impl<X, Y, Z>
 		{
-			constexpr
-			Vec_Impl() requires( std::default_initializable<X> && std::default_initializable<Y> && std::default_initializable<Z> ):
-			x(), y(), z() {}
-			
-			constexpr
+			X x; Y y; Z z;
+			public: constexpr
 			Vec_Impl(X&& x, Y&& y, Z&& z):
 				x(std::forward<X>(x)),
 				y(std::forward<Y>(y)),
 				z(std::forward<Z>(z))
 			{}
-			
-			X x; Y y; Z z;
 		};
 		
-		template<typename X, typename Y, typename Z> requires( alignof(X) > alignof(Y) && alignof(Y) < alignof(Z) && alignof(X) >= alignof(Z) )
+		template<typename X, typename Y, typename Z> requires(	(alignof(X)	>	alignof(Y))	&&	(alignof(Y)	<	alignof(Z))	&&	(alignof(X)	>=	alignof(Z))	)
 		struct Vec_Impl<X, Y, Z>
 		{
-			constexpr
-			Vec_Impl() requires( std::default_initializable<X> && std::default_initializable<Y> && std::default_initializable<Z> ):
-			x(), z(), y() {}
-			
-			constexpr
+			X x; Z z; Y y;
+			public: constexpr
 			Vec_Impl(X&& x, Y&& y, Z&& z):
 				x(std::forward<X>(x)),
 				z(std::forward<Z>(z)),
 				y(std::forward<Y>(y))
 			{}
-			
-			X x; Z z; Y y;
-	
 		};
 		
-		template<typename X, typename Y, typename Z> requires( alignof(X) < alignof(Y) && alignof(Y) > alignof(Z) && alignof(X) >= alignof(Z) )
+		template<typename X, typename Y, typename Z> requires(	(alignof(X)	<	alignof(Y))	&&	(alignof(Y)	>	alignof(Z))	&&	(alignof(X)	>=	alignof(Z))	)
 		struct Vec_Impl<X, Y, Z>
 		{
-			constexpr
-			Vec_Impl() requires( std::default_initializable<X> && std::default_initializable<Y> && std::default_initializable<Z> ):
-			y(), x(), z() {}
-			
-			constexpr
+			Y y; X x; Z z;
+			public: constexpr
 			Vec_Impl(X&& x, Y&& y, Z&& z):
 				y(std::forward<Y>(y)),
 				x(std::forward<X>(x)),
 				z(std::forward<Z>(z))
 			{}
-			
-			Y y; X x; Z z;
-	
 		};
 		
-		template<typename X, typename Y, typename Z> requires( alignof(X) < alignof(Y) && alignof(Y) > alignof(Z) && alignof(X) < alignof(Z) )
+		template<typename X, typename Y, typename Z> requires(	(alignof(X)	<	alignof(Y))	&&	(alignof(Y)	>	alignof(Z))	&&	(alignof(X)	<	alignof(Z))	)
 		struct Vec_Impl<X, Y, Z>
 		{
-			constexpr
-			Vec_Impl() requires( std::default_initializable<X> && std::default_initializable<Y> && std::default_initializable<Z> ):
-			y(), z(), x() {}
-			
-			constexpr
+			Y y; Z z; X x;
+			public: constexpr
 			Vec_Impl(X&& x, Y&& y, Z&& z):
 				y(std::forward<Y>(y)),
 				z(std::forward<Z>(z)),
 				x(std::forward<X>(x))
 			{}
-			
-			Y y; Z z; X x;
-	
 		};
 		
-		template<typename X, typename Y, typename Z> requires( alignof(X) >= alignof(Y) && alignof(Y) < alignof(Z) && alignof(X) < alignof(Z) )
+		template<typename X, typename Y, typename Z> requires(	(alignof(X)	>=	alignof(Y))	&&	(alignof(Y)	<	alignof(Z))	&&	(alignof(X)	<	alignof(Z))	)
 		struct Vec_Impl<X, Y, Z>
 		{
-			constexpr
-			Vec_Impl() requires( std::default_initializable<X> && std::default_initializable<Y> && std::default_initializable<Z> ):
-			z(), x(), y() {}
-			
-			constexpr
+			Z z; X x; Y y;
+			public: constexpr
 			Vec_Impl(X&& x, Y&& y, Z&& z):
 				z(std::forward<Z>(z)),
-				x(std::forward<X>(y)),
-				y(std::forward<Y>(z))
+				x(std::forward<X>(x)),
+				y(std::forward<Y>(y))
 			{}
-			
-			Z z; X x; Y y;
-			
+		};
+		
+		template<typename X, typename Y, typename Z> requires(	(alignof(X)	<	alignof(Y))	&&	(alignof(Y)	<	alignof(Z))	&&	(alignof(X)	<	alignof(Z))	)
+		struct Vec_Impl<X, Y, Z>
+		{
+			Z z; Y y; X x;
+			public: constexpr
+			Vec_Impl(X&& x, Y&& y, Z&& z):
+				z(std::forward<Z>(z)),
+				y(std::forward<Y>(y)),
+				x(std::forward<X>(x))
+			{}
 		};
 		
 		
@@ -105,32 +88,43 @@ namespace ink {
 		template<typename X, typename Y>
 		struct Vec_Impl<X, Y, void>
 		{
-			constexpr
-			Vec_Impl() requires( std::default_initializable<X> && std::default_initializable<Y> ):
-			x(), y() {}
-			
-			constexpr
-			Vec_Impl(X&& x, Y&& y):
-			x(std::forward<X>(x)),
-			y(std::forward<Y>(y)) {}
-			
 			X x; Y y;
+			public: constexpr
+			Vec_Impl(X&& x, Y&& y, [[maybe_unused]] std::nullptr_t z = nullptr):
+				x(std::forward<X>(x)),
+				y(std::forward<Y>(y))
+			{}
 		};
 		
 		template<typename X, typename Z>
 		struct Vec_Impl<X, void, Z>
 		{
-			constexpr
-			Vec_Impl() requires( std::default_initializable<X> && std::default_initializable<Z> ):
-			x(), z() {}
-			
-			constexpr
-			Vec_Impl(X&& x, Z&& z):
-			x(std::forward<X>(x)),
-			z(std::forward<Z>(z)) {}
-			
 			X x; Z z;
+			public: constexpr
+			Vec_Impl(X&& x, [[maybe_unused]] std::nullptr_t y, Z&& z):
+				x(std::forward<X>(x)),
+				z(std::forward<Z>(z))
+			{}
 		};
+		
+		template<typename Y, typename Z>
+		struct Vec_Impl<void, Y, Z>
+		{
+			Y y; Z z;
+			public: constexpr
+			Vec_Impl([[maybe_unused]] std::nullptr_t x, Y&& y, Z&& z):
+				y(std::forward<Y>(y)),
+				z(std::forward<Z>(z))
+			{}
+			
+		};
+		
+		
+		
+		template<> struct Vec_Impl<void, void, void>;
+		template<typename X> struct Vec_Impl<X, void, void>;
+		template<typename Y> struct Vec_Impl<void, Y, void>;
+		template<typename Z> struct Vec_Impl<void, void, Z>;
 		
 	}
 	
@@ -145,16 +139,47 @@ namespace ink {
 			private: using
 			underlying = internal::Vec_Impl<X, Y, Z>;
 			
-			public: constexpr
-			Vec() requires(default_ctr_or_void<X> && default_ctr_or_void<Y> && default_ctr_or_void<Z>):
-			underlying() {}
+			private: template<typename T, size_t = 0>
+			struct ctr_arg;
 			
-			//public: constexpr
-			//Vec()
+			private: template<typename T>
+			struct ctr_arg<T, 0>
+			{ using type = T; };
+			
+			private: template<typename T>
+			struct ctr_arg<T, 1>
+			{ using type = T &; };
+			
+			private: template<typename T>
+			struct ctr_arg<T, 2>
+			{ using type = T &&; };
+			
+			private: template<typename T>
+			struct ctr_arg<T, 3>
+			{ using type = T const&; };
+			
+			private: template<std::same_as<void> T>
+			struct ctr_arg<T>
+			{ using type = std::nullptr_t; };
+			
+			private: template<typename T, size_t = 0>
+			using ctr_arg_t = typename ctr_arg<T>::type;
+			
+			public: constexpr
+			Vec() requires(default_ctr_or_void<X> && default_ctr_or_void<Y> && default_ctr_or_void<Z>): underlying(
+				ctr_arg_t<X, 0>(),
+				ctr_arg_t<Y, 0>(),
+				ctr_arg_t<Z, 0>())
+			{}
+			
+			public: constexpr
+			Vec( ctr_arg_t<X, 2> x , ctr_arg_t<Y, 2> y , ctr_arg_t<Z, 2> z ): underlying(
+				std::forward<X>(x),
+				std::forward<Y>(y),
+				std::forward<Z>(z))
+			{}
 			
 		};
-		
-		
 		
 	}
 	
