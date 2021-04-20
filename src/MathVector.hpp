@@ -139,41 +139,18 @@ namespace ink {
 			private: using
 			underlying = internal::Vec_Impl<X, Y, Z>;
 			
-			private: template<typename T, size_t = 0>
-			struct ctr_arg;
-			
-			private: template<typename T>
-			struct ctr_arg<T, 0>
-			{ using type = T; };
-			
-			private: template<typename T>
-			struct ctr_arg<T, 1>
-			{ using type = T &; };
-			
-			private: template<typename T>
-			struct ctr_arg<T, 2>
-			{ using type = T &&; };
-			
-			private: template<typename T>
-			struct ctr_arg<T, 3>
-			{ using type = T const&; };
-			
-			private: template<std::same_as<void> T>
-			struct ctr_arg<T>
-			{ using type = std::nullptr_t; };
-			
-			private: template<typename T, size_t = 0>
-			using ctr_arg_t = typename ctr_arg<T>::type;
-			
 			public: constexpr
 			Vec() requires(default_ctr_or_void<X> && default_ctr_or_void<Y> && default_ctr_or_void<Z>): underlying(
-				ctr_arg_t<X, 0>(),
-				ctr_arg_t<Y, 0>(),
-				ctr_arg_t<Z, 0>())
+				std::conditional_t<(std::same_as<void, X>), std::nullptr_t, X>(),
+				std::conditional_t<(std::same_as<void, Y>), std::nullptr_t, Y>(),
+				std::conditional_t<(std::same_as<void, Z>), std::nullptr_t, Z>())
 			{}
 			
 			public: constexpr
-			Vec( ctr_arg_t<X, 2> x , ctr_arg_t<Y, 2> y , ctr_arg_t<Z, 2> z ): underlying(
+			Vec(	std::conditional_t<(std::same_as<void, X>), std::nullptr_t, X&&> x,
+					std::conditional_t<(std::same_as<void, Y>), std::nullptr_t, Y&&> y,
+					std::conditional_t<(std::same_as<void, Z>), std::nullptr_t, Z&&> z
+			): underlying(
 				std::forward<X>(x),
 				std::forward<Y>(y),
 				std::forward<Z>(z))
