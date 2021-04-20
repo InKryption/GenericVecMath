@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <tuple>
 #include "MathVector.hpp"
-#include "VectorMath.hpp"
 #include <utility>
 
 struct Test {
@@ -31,12 +30,14 @@ get(Test const& t) {
 	if constexpr(Idx == 2) return t.z;
 }
 
+// Memory unoptimized vector
+template<typename T, typename U, typename V>
+struct DummyVec
+{ T t; U u; V v; };
+
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
-	constexpr int i = 3;
-	
-	auto test = ink::internal::make_vec_impl(1,2,5);
-	test.z = 3;
+	constexpr ink::Vec<void, int, int> vec(nullptr,1,1);
 	
 	return 0;
 }
