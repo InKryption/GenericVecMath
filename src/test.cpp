@@ -35,7 +35,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
 	constexpr int i = 3;
 	
-	constexpr ink::detail::Vec<int, char, int> f{};
+	auto test = ink::internal::make_vec_impl(1,2,5);
+	test.z = 3;
 	
 	return 0;
 }
