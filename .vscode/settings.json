@@ -1,6 +1,5 @@
 {
 	"files.associations": {
-		"utility": "cpp",
 		"type_traits": "cpp",
 		"array": "cpp",
 		"cmath": "cpp",
@@ -11,6 +10,7 @@
 		"cstdlib": "cpp",
 		"exception": "cpp",
 		"tuple": "cpp",
+		"utility": "cpp",
 		"initializer_list": "cpp",
 		"limits": "cpp",
 		"new": "cpp",

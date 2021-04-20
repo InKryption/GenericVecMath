@@ -3,7 +3,7 @@
         {
             "name": "MinGW-w64",
             "includePath": [
-                "${workspaceFolder}/src"
+                "${workspaceFolder}/**"
             ],
             "defines": [],
             "compilerPath": "x86_64-w64-mingw32-g++-posix",
