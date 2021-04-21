@@ -43,7 +43,8 @@ struct DummyVec
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
-	constexpr ink::Vec<void, int, int> vec(nullptr,1,1);
+	constexpr ink::Vec<int, int, void> vec(1,1);
+	ink::Vec2<int> f;
 	
 	return 0;
 }

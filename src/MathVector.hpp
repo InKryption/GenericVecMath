@@ -8,106 +8,100 @@ namespace ink {
 	
 	namespace internal {
 		
-		template<typename T, typename U, typename V>
-		struct PackTypes;
+		template<typename... T>
+		struct CheckAligned {
+			static constexpr bool value
+			=	true;	};
 		
-		template<typename T, typename U, typename V>
-		requires(	(alignof(T) >= alignof(U))
-		&&			(alignof(U) >= alignof(V))
-		&&			(alignof(T) >= alignof(V)) )
-		struct PackTypes<T, U, V> {
-			using type = PackTypes<T, U, V>;
-			using gt = T;
-			using md = U;
-			using ls = V;
+		template<typename T1, typename T2, typename... T>
+		struct CheckAligned<T1, T2, T...> {
+			static constexpr bool value
+			=	(alignof(T1) >= alignof(T2))
+			&&	CheckAligned<T2, T...>::value;	};
+		
+		template<typename T1, typename T2>
+		struct CheckAligned<T1, T2> {
+			static constexpr bool value
+			=	(alignof(T1) >= alignof(T2));	};
+		
+		
+		
+		template<typename... T>
+		struct AlignTypes;
+		
+		template<typename... T> requires(CheckAligned<T...>::value)
+		struct AlignTypes<T...> {
+			using type = AlignTypes;
+			template<template<typename...> typename Template>
+			using rebind = Template<T...>;
 		};
 		
-		template<typename T, typename U, typename V>
-		requires(	(alignof(T)	>	alignof(U))
-		&&			(alignof(U)	<	alignof(V))
-		&&			(alignof(T)	>=	alignof(V)) )
-		struct PackTypes<T, U, V> {
-			using type = typename PackTypes<T, V, U>::type;
+		template<typename T1, typename... T>
+		struct AlignTypes<T1, AlignTypes<T...>>
+		{ using type = typename AlignTypes<T1, T...>::type; };
+		
+		template<typename T1, typename T2, typename... T>
+		requires( !CheckAligned<T1, T2, T...>::value )
+		struct AlignTypes<T1, T2, T...>
+		{
+			using _0 = std::conditional_t<(alignof(T1) >= alignof(T2)), T1, T2>;
+			using _1 = std::conditional_t<(alignof(T1) >= alignof(T2)), T2, T1>;
+			using type = typename AlignTypes<
+				_0 , typename AlignTypes<_1, T...>::type
+			>:: type;
 		};
 		
+		template<typename... T>
+		using AlignTypes_t = typename AlignTypes<T...>::type;
 		
+	}
+	
+	namespace detail {
 		
-		template<typename T, typename U, typename V>
-		requires(	(alignof(T)	<	alignof(U))
-		&&			(alignof(U)	>	alignof(V))
-		&&			(alignof(T)	>=	alignof(V)) )
-		struct PackTypes<T, U, V> {
-			using type = typename PackTypes<U, T, V>::type;
-		};
-		
-		template<typename T, typename U, typename V>
-		requires(	(alignof(T)	<	alignof(U))
-		&&			(alignof(U)	>=	alignof(V))
-		&&			(alignof(T)	<	alignof(V)) )
-		struct PackTypes<T, U, V> {
-			using type = typename PackTypes<U, V, T>::type;
-		};
-		
-		
-		
-		template<typename T, typename U, typename V>
-		requires(	(alignof(T)	>=	alignof(U))
-		&&			(alignof(U)	<	alignof(V))
-		&&			(alignof(T)	<	alignof(V)) )
-		struct PackTypes<T, U, V> {
-			using type = typename PackTypes<V, T, U>::type;
-		};
-		
-		template<typename T, typename U, typename V>
-		requires(	(alignof(T)	<	alignof(U))
-		&&			(alignof(U)	<	alignof(V))
-		&&			(alignof(T)	<	alignof(V)) )
-		struct PackTypes<T, U, V> {
-			using type = typename PackTypes<V, U, T>::type;
-		};
-		
-		template<typename T, typename U, typename V>
-		using PackTypes_t = typename PackTypes<T, U, V>::type;
-		
-		
-		template<typename T, size_t>
+		template<typename T, size_t axis_index>
 		struct Axis;
 		
-		template<size_t at>
-		struct Axis<void, at>
+		template<size_t axis_index>
+		struct Axis<void, axis_index>
 		{
-			constexpr Axis( [[maybe_unused]] auto&&... ) {}
-			constexpr Axis( std::nullptr_t ) {}
-			constexpr Axis() {}
+			
+			constexpr
+			Axis(std::nullptr_t = nullptr)
+			noexcept {}
+			
 		};
 		
 		template<typename T> requires(!std::same_as<T, void>)
 		struct Axis<T, 0>
 		{
-			
-			T x;
 			constexpr
-			Axis( std::convertible_to<T> auto&& x ):
-			x(x) {}
-			
-			constexpr
-			Axis(  ) requires( std::is_default_constructible_v<T> ):
+			Axis()
+			noexcept( noexcept(T()) ):
 			x() {}
 			
+			constexpr
+			Axis(auto&& x)
+			noexcept( noexcept(T( std::declval<T>() )) ):
+			x(x) {}
+			
+			T x;
 		};
 		
 		template<typename T> requires(!std::same_as<T, void>)
 		struct Axis<T, 1>
 		{
 			
-			T y;
 			constexpr
-			Axis( std::convertible_to<T> auto&& y ):
-			y(y) {}
+			Axis()
+			noexcept( noexcept(T()) ):
+			y() {}
 			
 			constexpr
-			Axis(  ) requires( std::is_default_constructible_v<T> ):
-			y() {}
+			Axis(auto&& y)
+			noexcept( noexcept(T( std::declval<T>() )) ):
+			y(y) {}
+			
+			T y;
 			
 		};
 		
@@ -115,125 +109,160 @@ namespace ink {
 		struct Axis<T, 2>
 		{
 			
-			T z;
 			constexpr
-			Axis( std::convertible_to<T> auto&& z ):
-			z(z) {}
+			Axis()
+			noexcept( noexcept(T()) ):
+			z() {}
 			
 			constexpr
-			Axis(  ) requires( std::is_default_constructible_v<T> ):
-			z() {}
+			Axis(auto&& z)
+			noexcept( noexcept(T( std::declval<T>() )) ):
+			z(z) {}
+			
+			T z;
 			
 		};
 		
 		
 		
-		template<typename T1, typename T2, typename T3>
-		struct Vec_impl;
+		template<typename Axis1, typename Axis2, typename Axis3>
+		struct VecBase;
 		
-		template<typename T1, size_t t1, typename T2, size_t t2, typename T3, size_t t3>
-		struct Vec_impl< Axis<T1 , t1>,Axis<T2 , t2>,Axis<T3 , t3> >:
-			public Axis<T1, t1>,
-			public Axis<T2, t2>,
-			public Axis<T3, t3>
+		template<
+			typename T_A1, size_t I_A1,
+			typename T_A2, size_t I_A2,
+			typename T_A3, size_t I_A3
+		> struct VecBase<
+			Axis<T_A1, I_A1>,
+			Axis<T_A2, I_A2>,
+			Axis<T_A3, I_A3>
+		>: public Axis<T_A1, I_A1>, Axis<T_A2, I_A2>, Axis<T_A3, I_A3>
 		{
 			
-			protected: template<typename T> using
-			ctr_arg_t = std::conditional_t< (std::same_as<T, void>), std::nullptr_t, T >;
+			private: using
+			A1 = Axis<T_A1, I_A1>;
+			private: using
+			A2 = Axis<T_A2, I_A2>;
+			private: using
+			A3 = Axis<T_A3, I_A3>;
 			
-			protected: template<typename T> static constexpr bool
-			default_or_void = std::is_default_constructible_v<T> || std::same_as<void, T>;
-			
-			private: template<size_t t> static constexpr auto&&
-			forward_param(auto&& x, auto&& y, auto&& z)
-			{
-				if constexpr(0 == t) return x;
-				if constexpr(1 == t) return y;
-				if constexpr(2 == t) return z;
+			private: template<size_t Idx> static constexpr auto&&
+			forward_param(auto&& x, auto&& y, auto&& z) noexcept {
+				if constexpr(Idx == 0) return x;
+				if constexpr(Idx == 1) return y;
+				if constexpr(Idx == 2) return z;
 			}
 			
 			public: constexpr
-			Vec_impl() requires(default_or_void<T1> && default_or_void<T2> && default_or_void<T3>):
-				Axis<T1, t1>(),
-				Axis<T2, t2>(),
-				Axis<T3, t3>()
+			VecBase()
+				noexcept(noexcept(A1())					&& noexcept(A2())					&& noexcept(A3())					)
+				requires(std::default_initializable<A1>	&& std::default_initializable<A2>	&& std::default_initializable<A3>	):
+				A1(), A2(), A3()
 			{}
 			
 			public: constexpr
-			Vec_impl(
-				std::convertible_to<ctr_arg_t<T1>> auto&& x,
-				std::convertible_to<ctr_arg_t<T2>> auto&& y,
-				std::convertible_to<ctr_arg_t<T3>> auto&& z
-			):
-				Axis<T1, t1>(forward_param<t1>(x,y,z)),
-				Axis<T2, t2>(forward_param<t2>(x,y,z)),
-				Axis<T3, t3>(forward_param<t3>(x,y,z))
+			VecBase(auto&& x, auto&& y, auto&& z)
+				noexcept(noexcept( A1(std::declval<A1>()) )	&&	noexcept( A2(std::declval<A2>()) )	&&	noexcept( A3(std::declval<A3>() ))):
+				A1(forward_param<I_A1>(x, y, z)),
+				A2(forward_param<I_A2>(x, y, z)),
+				A3(forward_param<I_A3>(x, y, z))
 			{}
 			
 		};
 		
 		template<typename X, typename Y, typename Z>
-		using PackedVec = Vec_impl <
-			typename internal::PackTypes_t<Axis<X, 0>, Axis<Y, 1>, Axis<Z, 2> >::gt,
-			typename internal::PackTypes_t<Axis<X, 0>, Axis<Y, 1>, Axis<Z, 2>>::md,
-			typename internal::PackTypes_t<Axis<X, 0>, Axis<Y, 1>, Axis<Z, 2>>::ls
-		>;
-		
-		
+		using PackedVecBase
+		=	typename internal
+		::	AlignTypes_t<	Axis<X,0> , Axis<Y,1> , Axis<Z,2>	>
+		::	rebind< VecBase >;
 		
 		template<typename X, typename Y = X, typename Z = Y>
-		class Vec: public PackedVec<X, Y, Z> {
+		class Vec: public PackedVecBase<X, Y, Z>
+		{
 			
-			private: template<typename T> using
-			ctr_arg_t = typename PackedVec<X, Y, Z>::ctr_arg_t<T>;
+			private: using
+			base = PackedVecBase<X, Y, Z>;
+			
+			private: static constexpr bool
+			void_X = std::same_as<void, X>;
+			
+			private: static constexpr bool
+			void_Y = std::same_as<void, Y>;
+			
+			private: static constexpr bool
+			void_Z = std::same_as<void, Z>;
 			
 			public: constexpr
-			Vec() requires(std::is_default_constructible_v<PackedVec<X, Y, Z>>):
-			PackedVec<X, Y, Z>()
+			Vec() noexcept(noexcept(base()))
+			requires(std::default_initializable<base>):
+			base() {}
+			
+			public: constexpr
+			Vec(std::convertible_to<X> auto&& x,
+				std::convertible_to<Y> auto&& y,
+				std::convertible_to<Z> auto&& z)
+				noexcept( noexcept(base( std::declval<X>() , std::declval<Y>() , std::declval<Z>() )) )
+				requires(!void_X && !void_Y && !void_Z):
+				base(x, y, z)
+			{}
+			
+			
+			
+			public: constexpr
+			Vec(std::convertible_to<X> auto&& x,
+				std::convertible_to<Y> auto&& y)
+				noexcept( noexcept(base( std::declval<X>() , std::declval<Y>() , nullptr )) )
+				requires(!void_X && !void_Y && void_Z):
+				base(x, y, nullptr)
 			{}
 			
 			public: constexpr
-			Vec(std::convertible_to<ctr_arg_t<X>> auto&& x,
-				std::convertible_to<ctr_arg_t<Y>> auto&& y,
-				std::convertible_to<ctr_arg_t<Z>> auto&& z):
-			PackedVec<X, Y, Z>(x, y, z)
+			Vec(std::convertible_to<X> auto&& x,
+				std::convertible_to<Z> auto&& z)
+				noexcept( noexcept(base( std::declval<X>() , nullptr , std::declval<Z>() )) )
+				requires(!void_X && void_Y && !void_Z):
+				base(x, nullptr, z)
 			{}
 			
 			public: constexpr
-			Vec(std::convertible_to<ctr_arg_t<X>> auto&& x,
-				std::convertible_to<ctr_arg_t<Y>> auto&& y)
-				requires(std::same_as<Z, void>):
-			PackedVec<X, Y, Z>(x, y, nullptr)
+			Vec(std::convertible_to<Y> auto&& y,
+				std::convertible_to<Z> auto&& z)
+				noexcept( noexcept(base( nullptr , std::declval<Y>() , std::declval<Z>() )) )
+				requires(void_X && !void_Y && !void_Z):
+				base(nullptr, y, z)
+			{}
+			
+			
+			
+			public: constexpr
+			Vec(std::convertible_to<X> auto&& x)
+				noexcept( noexcept(base( std::declval<X>() , nullptr , nullptr )) )
+				requires(!void_X && void_Y && void_Z):
+				base(x, nullptr, nullptr)
 			{}
 			
 			public: constexpr
-			Vec(std::convertible_to<ctr_arg_t<X>> auto&& x,
-				std::convertible_to<ctr_arg_t<Z>> auto&& z)
-				requires(std::same_as<Y, void>):
-			PackedVec<X, Y, Z>(x, nullptr, z)
+			Vec(std::convertible_to<Y> auto&& y)
+				noexcept( noexcept(base( nullptr , std::declval<Y>() , nullptr )) )
+				requires(void_X && !void_Y && void_Z):
+				base(nullptr, y, nullptr)
 			{}
 			
 			public: constexpr
-			Vec(std::convertible_to<ctr_arg_t<Y>> auto&& y,
-				std::convertible_to<ctr_arg_t<Z>> auto&& z)
-				requires(std::same_as<X, void>):
-			PackedVec<X, Y, Z>(nullptr, y, z)
+			Vec(std::convertible_to<Z> auto&& z)
+				noexcept( noexcept(base( nullptr , nullptr , std::declval<Z>() )) )
+				requires(void_X && void_Y && !void_Z):
+				base(nullptr, nullptr, z)
 			{}
 			
 		};
 		
-		void test() {
-			
-			
-			
-			constexpr Vec<void, void, int> n;
-			
-			
-		}
-		
 	}
 	
 	using detail::Vec;
+	
+	template<typename X, typename Y = X>
+	using Vec2 = Vec<X, Y, void>;
 	
 }
 
