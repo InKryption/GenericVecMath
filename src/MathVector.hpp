@@ -184,12 +184,8 @@ namespace ink {
 			base = PackedVecBase<X, Y, Z>;
 			
 			private: static constexpr bool
-			void_X = std::same_as<void, X>;
-			
-			private: static constexpr bool
-			void_Y = std::same_as<void, Y>;
-			
-			private: static constexpr bool
+			void_X = std::same_as<void, X>,
+			void_Y = std::same_as<void, Y>,
 			void_Z = std::same_as<void, Z>;
 			
 			public: constexpr
