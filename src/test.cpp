@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <tuple>
+#include <typeinfo>
 #include "MathVector.hpp"
 #include <utility>
 
@@ -7,6 +8,11 @@ struct Test {
 	int x;
 	double y;
 	float z;
+	
+	constexpr
+	Test(decltype(x) x, decltype(y) y, decltype(z) z):
+	x(x), y(y), z(z) {}
+	
 };
 
 template<size_t Idx> static constexpr auto&&

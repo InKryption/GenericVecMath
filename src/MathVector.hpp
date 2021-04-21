@@ -69,9 +69,6 @@ namespace ink {
 		template<typename T, typename U, typename V>
 		using PackTypes_t = typename PackTypes<T, U, V>::type;
 		
-	}
-	
-	namespace detail {
 		
 		template<typename T, size_t>
 		struct Axis;
@@ -224,6 +221,15 @@ namespace ink {
 			{}
 			
 		};
+		
+		void test() {
+			
+			
+			
+			constexpr Vec<void, void, int> n;
+			
+			
+		}
 		
 	}
 	
