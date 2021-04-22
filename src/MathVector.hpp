@@ -34,6 +34,8 @@ namespace ink {
 			using type = AlignTypes;
 			template<template<typename...> typename Template>
 			using rebind = Template<T...>;
+			template<size_t ElmntIdx>
+			using get = std::tuple_element_t<ElmntIdx, std::tuple<T...>>;
 		};
 		
 		template<typename T1, typename... T>
@@ -61,9 +63,7 @@ namespace ink {
 			using cmp_t = decltype(CMP);
 			
 			template<cmp_t V, typename T> struct Case
-			{
-				constexpr Case(cmp_t = V, T = T()) {}
-			};
+			{ constexpr Case(cmp_t = V, T = T()) {} };
 			
 			template<typename... CASES>
 			struct In_impl;
@@ -84,7 +84,6 @@ namespace ink {
 		};
 		
 	}
-	
 	
 	// Namespace of lambdas that represent all of the "arithmetic" operators
 	namespace Operators {
@@ -254,7 +253,6 @@ namespace ink {
 		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { {lhs ^= rhs}; } { return lhs ^= rhs; };
 		
 	}
-	
 	
 	
 	namespace detail {
@@ -495,8 +493,6 @@ namespace ink {
 		using Vec = internal::AlignTypes_t<Axis<X, AxisTag::x>, Axis<Y, AxisTag::y>, Axis<Z, AxisTag::z>>::template rebind<Axies>;
 		
 	}
-	
-	using detail::Vec;
 	
 }
 
