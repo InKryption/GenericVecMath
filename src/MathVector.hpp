@@ -202,8 +202,6 @@ namespace ink {
 				base(x, y, z)
 			{}
 			
-			
-			
 			public: constexpr
 			Vec(std::convertible_to<X> auto&& x,
 				std::convertible_to<Y> auto&& y)
@@ -227,8 +225,6 @@ namespace ink {
 				requires(void_X && !void_Y && !void_Z):
 				base(nullptr, y, z)
 			{}
-			
-			
 			
 			public: constexpr
 			Vec(std::convertible_to<X> auto&& x)
