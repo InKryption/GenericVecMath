@@ -362,7 +362,7 @@ namespace ink {
 		
 		template<XYZ tag> struct AxisBase<void, tag> {
 			constexpr AxisBase(std::nullptr_t = nullptr) noexcept {}
-			constexpr operator std::nullptr_t() noexcept { return nullptr; }
+			constexpr operator std::nullptr_t() const noexcept { return nullptr; }
 			
 			protected:
 			using value_type = void;
@@ -577,12 +577,6 @@ namespace ink {
 			}
 			
 		};
-		
-		void test() {
-			
-			
-			
-		}
 		
 	}
 	
