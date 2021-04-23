@@ -285,7 +285,6 @@ namespace ink {
 		
 		template<XYZ tag> struct AxisBase<void, tag> {
 			constexpr AxisBase(std::nullptr_t = nullptr) noexcept {}
-			constexpr operator std::nullptr_t() const noexcept { return nullptr; }
 			
 			protected:
 			using value_type = void;
@@ -501,7 +500,19 @@ namespace ink {
 			
 		};
 		
-		template<typename Lhs, typename Rhs> requires()
+		// template<typename X, typename Y, typename Z>
+		// static constexpr decltype(auto)
+		// operator+(auto&& lhs, auto&& rhs)
+		// requires std::same_as< std::remove_cvref_t<decltype(lhs)>, >
+		// && requires(decltype(lhs) lhs, decltype(rhs) rhs)
+		// {
+		// 	get<0>(lhs) + get<0>(rhs);
+		// 	get<1>(lhs) + get<1>(rhs);
+		// 	get<2>(lhs) + get<2>(rhs);
+		// }
+		// {
+		// 	return 
+		// }
 		
 		void test() {
 			
@@ -510,6 +521,8 @@ namespace ink {
 		}
 		
 	}
+	
+	using detail::Vec;
 	
 }
 
