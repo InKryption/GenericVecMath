@@ -19,7 +19,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
 	constexpr
 	VecYZ<int> f(1, 100);
-	
+	constexpr auto b = f.z;
 	
 	
 	

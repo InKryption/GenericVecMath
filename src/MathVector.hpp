@@ -97,179 +97,7 @@ namespace ink {
 		template<auto CMP, typename... cases>
 		using Switch_t = Switch<CMP>::template In<cases...>;
 		
-	}
-	
-	
-	// Namespace of lambdas that represent all of the "arithmetic" operators
-	namespace Operators {
-		
-		static constexpr auto
-		ADD				= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs + rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs + rhs; } { return lhs + rhs; };
-		
-		static constexpr auto
-		SUB				= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs - rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs - rhs; } { return lhs - rhs; };
-		
-		static constexpr auto
-		UNARY_MINUS		= [](auto&& v) constexpr noexcept(noexcept(-v)) -> decltype(auto)
-		requires requires(decltype(v) v) { -v; } { return -v; };
-		
-		static constexpr auto
-		UNARY_PLUS		= [](auto&& v) constexpr noexcept(noexcept(+v)) -> decltype(auto)
-		requires requires(decltype(v) v) { +v; } { return +v; };
-		
-		static constexpr auto
-		MUL				= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs * rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs * rhs; } { return lhs * rhs; };
-		
-		static constexpr auto
-		DIV				= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs / rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs / rhs; } { return lhs / rhs; };
-		
-		static constexpr auto
-		ADDRESS_OF		= [](auto&& v) constexpr noexcept(noexcept(&v)) -> decltype(auto)
-		requires requires(decltype(v) v) { &v; } { return &v; };
-		
-		static constexpr auto
-		DEREF			= [](auto&& v) constexpr noexcept(noexcept(*v)) -> decltype(auto)
-		requires requires(decltype(v) v) { *v; } { return *v; };
-		
-		static constexpr auto
-		BIT_AND			= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs & rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs & rhs; } { return lhs & rhs; };
-		
-		static constexpr auto
-		BIT_XOR			= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs ^ rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs ^ rhs; } { return lhs ^ rhs; };
-		
-		static constexpr auto
-		BIT_OR			= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs | rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs | rhs; } { return lhs | rhs; };
-		
-		static constexpr auto
-		BIT_NOT			= [](auto&& v) constexpr noexcept(noexcept(~v)) -> decltype(auto)
-		requires requires(decltype(v) v) { ~v; } { return ~v; };
-		
-		static constexpr auto
-		LOGICAL_AND		= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs && rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs && rhs; } { return lhs && rhs; };
-		
-		static constexpr auto
-		LOGICAL_OR		= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs || rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs || rhs; } { return lhs || rhs; };
-		
-		static constexpr auto
-		CMP_LT			= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs < rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs < rhs; } { return lhs < rhs; };
-		
-		static constexpr auto
-		CMP_GT			= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs > rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs > rhs; } { return lhs > rhs; };
-		
-		static constexpr auto
-		CMP_LT_EQ		= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs <= rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs <= rhs; } { return lhs <= rhs; };
-		
-		static constexpr auto
-		CMP_GT_EQ		= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs >= rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs >= rhs; } { return lhs >= rhs; };
-		
-		static constexpr auto
-		CMP_EQ			= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs == rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { {lhs == rhs}; } { return lhs == rhs; };
-		
-		static constexpr auto
-		CMP_NEQ			= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs != rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { {lhs != rhs}; } { return lhs != rhs; };
-		
-		static constexpr auto
-		LOGICAL_NOT		= [](auto&& v) constexpr noexcept(noexcept(!v)) -> decltype(auto)
-		requires requires(decltype(v) v) { !v; } { return !v; };
-		
-		static constexpr auto
-		MOD				= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs % rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs % rhs; } { return lhs % rhs; };
-		
-		static constexpr auto
-		SBL				= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs << rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs << rhs; } { return lhs << rhs; };
-		
-		static constexpr auto
-		SBR				= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs >> rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { lhs >> rhs; } { return lhs >> rhs; };
-		
-		static constexpr auto
-		POSTFIX_INC		= [](auto&& v) constexpr noexcept(noexcept(v++)) -> decltype(auto)
-		requires requires(decltype(v) v) { v++; } { return v++; };
-		
-		static constexpr auto
-		POSTFIX_DEC		= [](auto&& v) constexpr noexcept(noexcept(v--)) -> decltype(auto)
-		requires requires(decltype(v) v) { v--; } { return v--; };
-		
-		static constexpr auto
-		PREFIX_INC		= [](auto&& v) constexpr noexcept(noexcept(++v)) -> decltype(auto)
-		requires requires(decltype(v) v) { ++v; } { return ++v; }; 
-		
-		static constexpr auto
-		PREFIX_DEC		= [](auto&& v) constexpr noexcept(noexcept(--v)) -> decltype(auto)
-		requires requires(decltype(v) v) { --v; } { return --v; };
-		
-		static constexpr auto
-		FUNC_CALL		= [](auto&& f, auto&&... args) constexpr noexcept(noexcept(f(std::forward<decltype(args)>(args)...))) -> decltype(auto)
-		requires requires(decltype(f) f, decltype(args)... args) { f(std::forward<decltype(args)>(args)...); } { return f(std::forward<decltype(args)>(args)...); };
-		
-		static constexpr auto
-		SUBSCRIPT		= [](auto&& obj, auto&& i) constexpr noexcept(requires(decltype(obj) obj, decltype(i) i) { {obj[i]} noexcept; }) -> decltype(auto)
-		requires requires(decltype(obj) obj, decltype(i) i) { obj[i]; } { return obj[i]; };
-		
-		static constexpr auto
-		ASSIGN_EQ		= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs = rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { {lhs = rhs}; } { return lhs = rhs; };
-		
-		static constexpr auto
-		ASSIGN_MUL		= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs *= rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { {lhs *= rhs}; } { return lhs *= rhs; };
-		
-		static constexpr auto
-		ASSIGN_DIV		= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs /= rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { {lhs /= rhs}; } { return lhs /= rhs; };
-		
-		static constexpr auto
-		ASSIGN_MOD		= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs %= rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { {lhs %= rhs}; } { return lhs %= rhs; };
-		
-		static constexpr auto
-		ASSIGN_ADD		= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs += rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { {lhs += rhs}; } { return lhs += rhs; };
-		
-		static constexpr auto
-		ASSIGN_SUB		= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs -= rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { {lhs -= rhs}; } { return lhs -= rhs; };
-		
-		static constexpr auto
-		ASSIGN_SBR		= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs >>= rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { {lhs >>= rhs}; } { return lhs >>= rhs; };
-		
-		static constexpr auto
-		ASSIGN_SBL		= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs <<= rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { {lhs <<= rhs}; } { return lhs <<= rhs; };
-		
-		static constexpr auto
-		ASSIGN_BIT_AND	= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs &= rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { {lhs &= rhs}; } { return lhs &= rhs; };
-		
-		static constexpr auto
-		ASSIGN_BIT_OR	= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs |= rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { {lhs |= rhs}; } { return lhs |= rhs; };
-		
-		static constexpr auto
-		ASSIGN_BIT_XOR	= [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs ^= rhs)) -> decltype(auto)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs) { {lhs ^= rhs}; } { return lhs ^= rhs; };
-		
-	}
-	
-	
+	}	
 	
 	namespace detail {
 		
@@ -285,7 +113,6 @@ namespace ink {
 		
 		template<XYZ tag> struct AxisBase<void, tag> {
 			constexpr AxisBase(std::nullptr_t = nullptr) noexcept {}
-			
 			protected:
 			using value_type = void;
 			using ctr_arg = std::nullptr_t;
@@ -362,10 +189,10 @@ namespace ink {
 		using AxisByAlignment = internal::AlignTypes_t<XAxis<X>, YAxis<Y>, ZAxis<Z>>::template get<Which>;
 		
 		template<typename X, typename Y, typename Z>
-		class Vec: public
-			AxisByAlignment<0, X, Y, Z>,
-			AxisByAlignment<1, X, Y, Z>,
-			AxisByAlignment<2, X, Y, Z>
+		class Vec:
+		public AxisByAlignment<0, X, Y, Z>,
+		public AxisByAlignment<1, X, Y, Z>,
+		public AxisByAlignment<2, X, Y, Z>
 		{
 			private: template<size_t Idx>
 			using base_bo = AxisByAlignment<Idx, X, Y, Z>;
