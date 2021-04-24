@@ -5,23 +5,15 @@
 #include <utility>
 
 
-template<typename X, typename Y = X>
-using VecXY = ink::Vec<X, Y, void>;
-
-template<typename X, typename Z = X>
-using VecXZ = ink::Vec<X, void, Z>;
-
-template<typename Y, typename Z = Y>
-using VecYZ = ink::Vec<void, Y, Z>;
-
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
-	constexpr
-	VecYZ<int> f(1, 100);
-	constexpr auto b = f.z;
+	constexpr ink::Vec vec1(3, 7ull, 3);
 	
+	constexpr ink::detail::Axis<int, ink::detail::XYZ::X> A1(1);
+	constexpr ink::detail::Axis<void, ink::detail::XYZ::X> A2;
 	
+	constexpr auto b = A2 * A1;
 	
 	return 0;
 }
