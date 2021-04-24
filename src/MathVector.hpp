@@ -98,15 +98,15 @@ namespace ink {
 		using Switch_t = Switch<CMP>::template In<cases...>;
 
 	}
-
+	
 	template<typename X, typename Y, typename Z> class Vec;
-
+	
 	namespace detail {
-
+		
 		template<typename T>
 		concept non_void = (!std::same_as<void, T>);
-
-		enum class XYZ { X , Y , Z };
+		
+		enum class XYZ { X = 1 , Y = 2, Z = 4 };
 		template<typename T,
 						XYZ tag>
 								struct AxisBase;
@@ -132,16 +132,16 @@ namespace ink {
 			
 			protected: using
 			base = AxisBase<T, tag>;
-
+			
 			protected: using
 			value_type = T;
-
+			
 			protected: using
 			ctr_arg = typename base::ctr_arg;
-
+			
 			private: template<typename... Arg> static constexpr bool
 			NOEXCEPT_CTR = noexcept(base{std::forward<Arg>(std::declval<Arg>())...});
-
+			
 			protected: constexpr decltype(auto)
 			data() noexcept
 			{
@@ -152,7 +152,7 @@ namespace ink {
 					if constexpr(tag == XYZ::Z) return *std::addressof(this->z);
 				}
 			}
-
+			
 			protected: constexpr decltype(auto)
 			data() const noexcept
 			{
