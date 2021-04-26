@@ -5,15 +5,16 @@
 #include <utility>
 
 
-
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
-	constexpr ink::Vec vec1(3, 7ull, 3);
 	
-	constexpr ink::detail::Axis<int, ink::detail::XYZ::X> A1(1);
-	constexpr ink::detail::Axis<void, ink::detail::XYZ::X> A2;
 	
-	constexpr auto b = A2 * A1;
+	constexpr ink::Vec vec1(3, 5, true);
+	constexpr ink::Vec vec2(1, nullptr, true);
+	
+	constexpr ink::Vec out = vec1 + vec2;
+	
+	printf("%i %i %i\n", out.x, out.y, out.z);
 	
 	return 0;
 }

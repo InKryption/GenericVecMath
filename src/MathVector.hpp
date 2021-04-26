@@ -4,8 +4,6 @@
 #include <cstdlib>
 #include <concepts>
 
-#include <memory>
-
 namespace ink {
 
 	namespace internal {
@@ -107,37 +105,27 @@ namespace ink {
 		concept non_void = (!std::same_as<void, T>);
 		
 		enum class XYZ { X = 1 , Y = 2, Z = 4 };
-		template<typename T,
-						XYZ tag>
-								struct AxisBase;
+		template<typename T, XYZ tag>
+		struct AxisBase;
 		
-		template<non_void T>	struct AxisBase<T, XYZ::X> { using ctr_arg = T; T x; };
-		template<non_void T>	struct AxisBase<T, XYZ::Y> { using ctr_arg = T; T y; };
-		template<non_void T>	struct AxisBase<T, XYZ::Z> { using ctr_arg = T; T z; };
-		
-		template<XYZ tag>		struct AxisBase<void, tag> {
-			constexpr AxisBase(std::nullptr_t = nullptr) noexcept {}
-			protected:
-			using value_type = void;
-			using ctr_arg = std::nullptr_t;
-		};
-		
-		
+		template<non_void T>	struct AxisBase<T, XYZ::X> { T x; };
+		template<non_void T>	struct AxisBase<T, XYZ::Y> { T y; };
+		template<non_void T>	struct AxisBase<T, XYZ::Z> { T z; };
+		template<XYZ tag>		struct AxisBase<void, tag> { constexpr AxisBase(std::nullptr_t = nullptr) noexcept {} };
 		
 		template<typename T, XYZ tag>
-		struct Axis:
-		public AxisBase<T, tag> {
+		struct Axis: public AxisBase<T, tag> {
 			
 			template<typename, XYZ> friend struct Axis;
 			
 			protected: using
 			base = AxisBase<T, tag>;
 			
-			protected: using
+			public: using
 			value_type = T;
 			
 			protected: using
-			ctr_arg = typename base::ctr_arg;
+			ctr_arg = std::conditional_t<std::same_as<T, void>, std::nullptr_t, T>;
 			
 			private: template<typename... Arg> static constexpr bool
 			NOEXCEPT_CTR = noexcept(base{std::forward<Arg>(std::declval<Arg>())...});
@@ -145,7 +133,7 @@ namespace ink {
 			protected: constexpr decltype(auto)
 			data() noexcept
 			{
-				if constexpr(std::same_as<void, T>) return *this;
+				if constexpr(std::same_as<void, T>) return;
 				else {
 					if constexpr(tag == XYZ::X) return *std::addressof(this->x);
 					if constexpr(tag == XYZ::Y) return *std::addressof(this->y);
@@ -157,7 +145,7 @@ namespace ink {
 			data() const noexcept
 			{
 
-				if constexpr(std::same_as<void, T>) return *this;
+				if constexpr(std::same_as<void, T>) return;
 				else {
 					if constexpr(tag == XYZ::X) return *std::addressof(this->x);
 					if constexpr(tag == XYZ::Y) return *std::addressof(this->y);
@@ -168,206 +156,221 @@ namespace ink {
 			
 			public: constexpr
 			Axis() noexcept(NOEXCEPT_CTR<>)
-			requires(std::default_initializable<base>):
+			requires(std::default_initializable<T>):
 			base{} {}
 
 			public: constexpr
-			Axis(ctr_arg& v) noexcept(NOEXCEPT_CTR<ctr_arg&>)
-			requires(std::constructible_from<base, T&>):
-			base{std::forward<T&>(v)} {}
-
-			public: constexpr
-			Axis(ctr_arg&& v) noexcept(NOEXCEPT_CTR<ctr_arg&&>)
-			requires(std::constructible_from<base, T&&>):
-			base{std::forward<T&&>(v)} {}
-
-			public: constexpr
-			Axis(ctr_arg const& v) noexcept(NOEXCEPT_CTR<ctr_arg const&>)
-			requires(std::constructible_from<base, ctr_arg const&>):
-			base{std::forward<ctr_arg const&>(v)} {}
+			Axis(std::convertible_to<ctr_arg> auto&& v) noexcept(noexcept( base{std::forward<decltype(v)>(v)} ))
+			: base{std::forward<decltype(v)>(v)} {}
 			
-			private: static constexpr bool
+			protected: static constexpr bool
 			is_void = std::same_as<void, T>;
-			
-			public: template<typename U> constexpr decltype(auto)
-			operator+(Axis<U, tag> const& rhs) const
-			{
-				if constexpr(is_void) return Axis<U, tag>( rhs.data() );
-				else return Axis<decltype(data() + rhs.data()), tag>( data() + rhs.data() );
-			}
-			
-			public: template<typename U> constexpr decltype(auto)
-			operator-(Axis<U, tag> const& rhs) const
-			{
-				if constexpr(is_void) return Axis<U, tag>( rhs.data() );
-				else return Axis<decltype(data() - rhs.data()), tag>( data() - rhs.data() );
-			}
-			
-			public: template<typename U> constexpr decltype(auto)
-			operator*(Axis<U, tag> const& rhs) const
-			{
-				if constexpr(is_void) return Axis<U, tag>( rhs.data() );
-				else return Axis<decltype(data() * rhs.data()), tag>( data() * rhs.data() );
-			}
-			
-			public: template<typename U> constexpr decltype(auto)
-			operator/(Axis<U, tag> const& rhs) const
-			{
-				if constexpr(is_void) return Axis<U, tag>( rhs.data() );
-				else return Axis<decltype(data() / rhs.data()), tag>( data() / rhs.data() );
-			}
 			
 		};
 		
-		template<typename T> using XAxis = Axis<T, XYZ::X>;
-		template<typename T> using YAxis = Axis<T, XYZ::Y>;
-		template<typename T> using ZAxis = Axis<T, XYZ::Z>;
-
 		template<size_t Which, typename X, typename Y, typename Z>
-		using AxisByAlignment = internal::AlignTypes_t<XAxis<X>, YAxis<Y>, ZAxis<Z>>::template data<Which>;
-
+		using AxisByAlignment = internal::AlignTypes_t<Axis<X, XYZ::X>, Axis<Y, XYZ::Y>, Axis<Z, XYZ::Z>>::template data<Which>;
+		
+		template<typename X, typename Y, typename Z>
+		struct VecBase:
+			public AxisByAlignment<0, X, Y, Z>,
+			public AxisByAlignment<1, X, Y, Z>,
+			public AxisByAlignment<2, X, Y, Z>
+		{
+			
+			protected: using XYZ = detail::XYZ;
+			
+			private: template<size_t Idx>
+			using base_bo = detail::AxisByAlignment<Idx, X, Y, Z>;
+			
+			protected: template<XYZ tag>
+			using base = internal::
+			Switch_t<tag,
+				typename internal::Switch<>::	Case<(XYZ::X),	detail::Axis<X, XYZ::X> > ,
+				typename internal::Switch<>::	Case<(XYZ::Y),	detail::Axis<Y, XYZ::Y> > ,
+				typename internal::Switch<>::	Case<(XYZ::Z),	detail::Axis<Z, XYZ::Z> >
+			>;
+			
+			using base_X = base<XYZ::X>;
+			using base_Y = base<XYZ::Y>;
+			using base_Z = base<XYZ::Z>;
+			
+			public: template<XYZ tag>
+			using value_type = typename base<tag>::value_type;
+			
+			private: template<typename _base, typename... T> static constexpr bool
+			NOEXCEPT_CTR = noexcept(_base(std::forward<T>(std::declval<T>())...));
+			
+			private: template<size_t Idx> static constexpr auto&&
+			forward_param(auto&& x, auto&& y, auto&& z) noexcept {
+				if constexpr(std::same_as<base_bo<Idx>, base_X>)
+					return x;
+				if constexpr(std::same_as<base_bo<Idx>, base_Y>)
+					return y;
+				if constexpr(std::same_as<base_bo<Idx>, base_Z>)
+					return z;
+			}
+			
+			public: constexpr
+			VecBase(
+				std::convertible_to<typename base_X::ctr_arg> auto&& x,
+				std::convertible_to<typename base_Y::ctr_arg> auto&& y,
+				std::convertible_to<typename base_Z::ctr_arg> auto&& z)
+					noexcept( noexcept(base_X(x)) && noexcept(base_Y(y)) && noexcept(base_Z(z)) ):
+			base_bo<0>( forward_param<0>( x , y , z ) ),
+			base_bo<1>( forward_param<1>( x , y , z ) ),
+			base_bo<2>( forward_param<2>( x , y , z ) ) {}
+			
+		};
+		
 	}
 
 	template<typename X, typename Y = void, typename Z = void>
-	class Vec:
-	public detail::AxisByAlignment<0, X, Y, Z>,
-	public detail::AxisByAlignment<1, X, Y, Z>,
-	public detail::AxisByAlignment<2, X, Y, Z>
+	class Vec: public detail::VecBase<X, Y, Z>
 	{
-		private: using XYZ = detail::XYZ;
-
-		public: using value_type_x = X;
-		public: using value_type_y = Y;
-		public: using value_type_z = Z;
-
-		private: template<size_t Idx>
-		using base_bo = detail::AxisByAlignment<Idx, X, Y, Z>;
-
-		private: template<detail::XYZ tag>
-		using base_bt = internal::
-		Switch_t<tag,
-			typename internal::Switch<>::	Case<(XYZ::X),	detail::Axis<X, XYZ::X> > ,
-			typename internal::Switch<>::	Case<(XYZ::Y),	detail::Axis<Y, XYZ::Y> > ,
-			typename internal::Switch<>::	Case<(XYZ::Z),	detail::Axis<Z, XYZ::Z> >
-		>;
-
-		using base_X = base_bt<XYZ::X>;
-		using base_Y = base_bt<XYZ::Y>;
-		using base_Z = base_bt<XYZ::Z>;
-
-		private: template<typename _base, typename... T> static constexpr bool
-		NOEXCEPT_CTR = noexcept(_base(std::forward<T>(std::declval<T>())...));
-
-		private: template<size_t Idx> static constexpr auto&&
-		forward_param(auto&& x, auto&& y, auto&& z) noexcept {
-			if constexpr(std::same_as<base_bo<Idx>, base_X>)
-				return x;
-			if constexpr(std::same_as<base_bo<Idx>, base_Y>)
-				return y;
-			if constexpr(std::same_as<base_bo<Idx>, base_Z>)
-				return z;
-		}
 		
-		/* Default constructor */
-
+		private: using
+		base = detail::VecBase<X, Y, Z>;
+		
+		private: using axis_X = typename base::base_X;
+		private: using axis_Y = typename base::base_Y;
+		private: using axis_Z = typename base::base_Z;
+		
+		private: using ctr_X = typename axis_X::ctr_arg;
+		private: using ctr_Y = typename axis_Y::ctr_arg;
+		private: using ctr_Z = typename axis_Z::ctr_arg;
+		
+		
+		
+		/* Default Constructor */
+		
 		public: constexpr
 		Vec()
-				noexcept( NOEXCEPT_CTR<base_X> && NOEXCEPT_CTR<base_Y> && NOEXCEPT_CTR<base_Z> )
-				requires( std::default_initializable<base_X> && std::default_initializable<base_Y> && std::default_initializable<base_Z> ):
-		base_bo<0>(),
-		base_bo<1>(),
-		base_bo<2>() {}
+		noexcept( noexcept(base( ctr_X() , ctr_Y() , ctr_Z() )) )
+		requires( std::default_initializable<axis_X> && std::default_initializable<axis_Y> && std::default_initializable<axis_Z> )
+		: base( ctr_X(), ctr_Y(), ctr_Z() ) {}
 		
 		
 		
-		/* All Three Axies Are Non-Void */
+		/* Standard & Deducible Constructors */
 		
 		public: constexpr
-		Vec(std::convertible_to<typename base_X::ctr_arg> auto&& x,
-			std::convertible_to<typename base_Y::ctr_arg> auto&& y,
-			std::convertible_to<typename base_Z::ctr_arg> auto&& z)
-				noexcept( NOEXCEPT_CTR<base_X, decltype(x)> && NOEXCEPT_CTR<base_Y, decltype(y)> && NOEXCEPT_CTR<base_Z, decltype(z)> ):
-		base_bo<0>( forward_param<0>(std::forward<decltype(x)>(x), std::forward<decltype(y)>(y), std::forward<decltype(z)>(z)) ),
-		base_bo<1>( forward_param<1>(std::forward<decltype(x)>(x), std::forward<decltype(y)>(y), std::forward<decltype(z)>(z)) ),
-		base_bo<2>( forward_param<2>(std::forward<decltype(x)>(x), std::forward<decltype(y)>(y), std::forward<decltype(z)>(z)) ) {}
-		
-		
-		
-		/* Only Two Arguments required */
+		Vec(std::convertible_to<ctr_X> auto && x,
+			std::convertible_to<ctr_Y> auto && y,
+			std::convertible_to<ctr_Z> auto && z)
+		noexcept(noexcept( base( x , y , z ) ))
+		: base( x , y , z ) {}
 		
 		public: constexpr
-		Vec(std::convertible_to<typename base_X::ctr_arg> auto&& x, std::convertible_to<typename base_Y::ctr_arg> auto&& y)
-				noexcept( NOEXCEPT_CTR<base_X, decltype(x)> && NOEXCEPT_CTR<base_Y, decltype(y)> )
-				requires( std::same_as<void, Z> || std::default_initializable<Z> ):
-		base_bo<0>( forward_param<0>(std::forward<decltype(x)>(x), std::forward<decltype(y)>(y), typename base_Z::ctr_arg()) ),
-		base_bo<1>( forward_param<1>(std::forward<decltype(x)>(x), std::forward<decltype(y)>(y), typename base_Z::ctr_arg()) ),
-		base_bo<2>( forward_param<2>(std::forward<decltype(x)>(x), std::forward<decltype(y)>(y), typename base_Z::ctr_arg()) ) {}
+		Vec(std::convertible_to<ctr_X> auto&& x,
+			std::convertible_to<ctr_Y> auto&& y)
+		noexcept(noexcept( base( x , y , ctr_Z() ) ))
+		requires( std::default_initializable<axis_Z> || axis_Z::is_void )
+		: base( x , y , ctr_Z() ) {}
 		
 		public: constexpr
-		Vec(std::convertible_to<typename base_X::ctr_arg> auto&& x, std::convertible_to<typename base_Z::ctr_arg> auto&& z)
-				noexcept( NOEXCEPT_CTR<base_X, decltype(x)> && NOEXCEPT_CTR<base_Z, decltype(z)> )
-				requires( std::same_as<void, Y> ):
-		base_bo<0>( forward_param<0>(std::forward<decltype(x)>(x), typename base_Y::ctr_arg(), std::forward<decltype(z)>(z)) ),
-		base_bo<1>( forward_param<1>(std::forward<decltype(x)>(x), typename base_Y::ctr_arg(), std::forward<decltype(z)>(z)) ),
-		base_bo<2>( forward_param<2>(std::forward<decltype(x)>(x), typename base_Y::ctr_arg(), std::forward<decltype(z)>(z)) ) {}
+		Vec(std::convertible_to<ctr_X> auto&& x)
+		noexcept(noexcept( base( x , ctr_Y(), ctr_Z() ) ))
+		requires( (std::default_initializable<axis_Y> || axis_Y::is_void) && (std::default_initializable<axis_Z> || axis_Z::is_void) )
+		: base( x , ctr_Y() , ctr_Z() ) {}
+		
+		
+		
+		/* Conditional Constructors */
 		
 		public: constexpr
-		Vec(std::convertible_to<typename base_Y::ctr_arg> auto&& y, std::convertible_to<typename base_Z::ctr_arg> auto&& z)
-				noexcept( NOEXCEPT_CTR<base_Y, decltype(y)> && NOEXCEPT_CTR<base_Z, decltype(z)> )
-				requires( std::same_as<void, X> ):
-		base_bo<0>( forward_param<0>(typename base_X::ctr_arg(), std::forward<decltype(y)>(y), std::forward<decltype(z)>(z)) ),
-		base_bo<1>( forward_param<1>(typename base_X::ctr_arg(), std::forward<decltype(y)>(y), std::forward<decltype(z)>(z)) ),
-		base_bo<2>( forward_param<2>(typename base_X::ctr_arg(), std::forward<decltype(y)>(y), std::forward<decltype(z)>(z)) ) {}
-		
-		/* Only One Argument required */
+		Vec(std::convertible_to<ctr_Y> auto&& y,
+			std::convertible_to<ctr_Z> auto&& z)
+		noexcept(noexcept( base( ctr_X() , y , z ) ))
+		requires( axis_X::is_void )
+		: base( ctr_X() , y , z ) {}
 		
 		public: constexpr
-		Vec(std::convertible_to<typename base_X::ctr_arg> auto&& x)
-				noexcept( NOEXCEPT_CTR<base_X, decltype(x)> )
-				requires( (std::same_as<void, Y> || std::default_initializable<base_Y>) && (std::same_as<void, Z> || std::default_initializable<base_Z>) ):
-		base_X( std::forward<decltype(x)>(x) ) {}
+		Vec(std::convertible_to<ctr_X> auto&& x,
+			std::convertible_to<ctr_Z> auto&& z)
+		noexcept(noexcept( base( x , ctr_Y() , z) ))
+		requires( axis_Y::is_void )
+		: base( x , ctr_Y() , z ) {}
 		
-		public: constexpr
-		Vec(std::convertible_to<typename base_Y::ctr_arg> auto&& y)
-				noexcept( NOEXCEPT_CTR<base_Y, decltype(y)> )
-				requires( std::same_as<void, X> && (std::same_as<void, Z> || std::default_initializable<base_Z>) ):
-		base_Y( std::forward<decltype(y)>(y) ) {}
+		#if defined(__GNUC__)
+		#define ATTRIBUTE_UNUSED __attribute__((unused))
+		#else
+		#define ATTRIBUTE_UNUSED
+		#endif
 		
-		public: constexpr
-		Vec(std::convertible_to<typename base_Z::ctr_arg> auto&& z)
-				noexcept( NOEXCEPT_CTR<base_Z, decltype(z)> )
-				requires( std::same_as<void, X> && std::same_as<void, Y> ):
-		base_Z( std::forward<decltype(z)>(z) ) {}
-		
-		
-		
-		/* get<>() method */
-		
-		private: template<size_t Idx> requires(Idx < 3) constexpr decltype(auto)
-		get_impl() noexcept {
-			if constexpr(Idx == 0) return this->base_X::data();
-			if constexpr(Idx == 1) return this->base_Y::data();
-			if constexpr(Idx == 2) return this->base_Z::data();
+		#define DefBinaryOpFriend(op, lhs_spec, rhs_spec)											\
+		public: template<typename RX, typename RY, typename RZ>										\
+		friend constexpr decltype(auto)																\
+		operator op (Vec lhs_spec lhs, Vec<RX, RY, RZ> rhs_spec rhs) noexcept(						\
+				noexcept( requires(Vec lhs, Vec<RX, RY, RZ> rhs) { { lhs.x op rhs.x } noexcept; } || std::same_as<void, X> || std::same_as<void, RX>)	\
+			&&	noexcept( requires(Vec lhs, Vec<RX, RY, RZ> rhs) { { lhs.y op rhs.y } noexcept; } || std::same_as<void, Y> || std::same_as<void, RY>)	\
+			&&	noexcept( requires(Vec lhs, Vec<RX, RY, RZ> rhs) { { lhs.z op rhs.z } noexcept; } || std::same_as<void, Z> || std::same_as<void, RZ>)	\
+		) requires (																				\
+				(requires(X lhs_spec lhs, RX rhs_spec rhs) { {lhs op rhs}; } || std::same_as<void, X> || std::same_as<void, RX> )						\
+			&&	(requires(Y lhs_spec lhs, RY rhs_spec rhs) { {lhs op rhs}; } || std::same_as<void, Y> || std::same_as<void, RY> )						\
+			&&	(requires(Z lhs_spec lhs, RZ rhs_spec rhs) { {lhs op rhs}; } || std::same_as<void, Z> || std::same_as<void, RZ> )						\
+			&&	!std::same_as<void, X> && !std::same_as<void, Y> && !std::same_as<void, X>)			\
+		{																							\
+			constexpr bool NOEXCEPT_FUNC = noexcept(												\
+					noexcept( requires(Vec lhs, Vec<RX, RY, RZ> rhs) { { lhs.x op rhs.x } noexcept; } || std::same_as<void, X> || std::same_as<void, RX>)	\
+				&&	noexcept( requires(Vec lhs, Vec<RX, RY, RZ> rhs) { { lhs.y op rhs.y } noexcept; } || std::same_as<void, Y> || std::same_as<void, RY>)	\
+				&&	noexcept( requires(Vec lhs, Vec<RX, RY, RZ> rhs) { { lhs.z op rhs.z } noexcept; } || std::same_as<void, Z> || std::same_as<void, RZ>));	\
+			struct Empty { constexpr operator std::nullptr_t() noexcept { return nullptr; } };		\
+			constexpr Empty empty;																	\
+			decltype(auto) x_out = [&]() constexpr noexcept(NOEXCEPT_FUNC) -> decltype(auto) {		\
+				if constexpr( std::same_as<X, void> &&  std::same_as<RX, void>)	return empty;		\
+				if constexpr(!std::same_as<X, void> &&  std::same_as<RX, void>)	return *&lhs.x;		\
+				if constexpr( std::same_as<X, void> && !std::same_as<RX, void>)	return *&rhs.x;		\
+				if constexpr(!std::same_as<X, void> && !std::same_as<RX, void>)						\
+				{ return lhs.x op rhs.x; }															\
+			}();																					\
+			decltype(auto) y_out = [&]() constexpr noexcept(NOEXCEPT_FUNC) -> decltype(auto) {		\
+				if constexpr( std::same_as<Y, void> &&  std::same_as<RY, void>)	return empty;		\
+				if constexpr(!std::same_as<Y, void> &&  std::same_as<RY, void>)	return lhs.y;		\
+				if constexpr( std::same_as<Y, void> && !std::same_as<RY, void>)	return rhs.y;		\
+				if constexpr(!std::same_as<Y, void> && !std::same_as<RY, void>)						\
+				{ return lhs.y op rhs.y; }															\
+			}();																					\
+			decltype(auto) z_out = [&]() constexpr noexcept(NOEXCEPT_FUNC) -> decltype(auto) {		\
+				if constexpr( std::same_as<Z, void> &&  std::same_as<RZ, void>)	return empty;		\
+				if constexpr(!std::same_as<Z, void> &&  std::same_as<RZ, void>)	return lhs.z;		\
+				if constexpr( std::same_as<Z, void> && !std::same_as<RZ, void>)	return rhs.z;		\
+				if constexpr(!std::same_as<Z, void> && !std::same_as<RZ, void>)						\
+				{ return lhs.z op rhs.z; }															\
+			}();																					\
+																									\
+			return Vec<																				\
+			std::conditional_t<( std::same_as<void,X> &&  std::same_as<void,RX>), void,				\
+			std::conditional_t<(!std::same_as<void,X> && !std::same_as<void,RX>), decltype(x_out),	\
+			std::conditional_t<(std::same_as<void,X>), RX, X>>>										\
+			,																						\
+			std::conditional_t<( std::same_as<void,Y> &&  std::same_as<void,RY>), void,				\
+			std::conditional_t<(!std::same_as<void,Y> && !std::same_as<void,RY>), decltype(y_out),	\
+			std::conditional_t<(std::same_as<void,Y>), RY, Y>>>										\
+			,																						\
+			std::conditional_t<( std::same_as<void,Z> &&  std::same_as<void,RZ>), void,				\
+			std::conditional_t<(!std::same_as<void,Z> && !std::same_as<void,RZ>), decltype(z_out),	\
+			std::conditional_t<(std::same_as<void,Z>), RZ, Z>>>										\
+			>( x_out , y_out , z_out );																\
 		}
 		
-		private: template<size_t Idx> requires(Idx < 3) constexpr decltype(auto)
-		get_impl() const noexcept {
-			if constexpr(Idx == 0) return this->base_X::data();
-			if constexpr(Idx == 1) return this->base_Y::data();
-			if constexpr(Idx == 2) return this->base_Z::data();
-		}
+		#define DEFINE_BINARY_OP_VARIANTS(op)				\
+			DefBinaryOpFriend(op,	&,			&		)	\
+			DefBinaryOpFriend(op,	&,			&&		)	\
+			DefBinaryOpFriend(op,	&,			const&	)	\
+			DefBinaryOpFriend(op,	&&,			&		)	\
+			DefBinaryOpFriend(op,	&&,			&&		)	\
+			DefBinaryOpFriend(op,	&&,			const&	)	\
+			DefBinaryOpFriend(op,	const&,		&		)	\
+			DefBinaryOpFriend(op,	const&,		&&		)	\
+			DefBinaryOpFriend(op,	const&,		const&	)	\
 		
-		public: template<size_t Idx> friend constexpr decltype(auto)
-		get(Vec & v) noexcept
-		{ return v.template get_impl<Idx>(); }
+		#define BinaryOps(m) m(+) m(-) m(*) m(/) m(%) m(&) m(|) m(^) m(&&) m(||) m(==) m(!=) m(<) m(>) m(<=) m(>=)
+		BinaryOps(DEFINE_BINARY_OP_VARIANTS)
 		
-		public: template<size_t Idx> friend constexpr decltype(auto)
-		get(Vec && v) noexcept
-		{ return v.template get_impl<Idx>(); }
-		
-		public: template<size_t Idx> friend constexpr decltype(auto)
-		get(Vec const& v) noexcept
-		{ return v.template get_impl<Idx>(); }
+		#undef BinaryOps
+		#undef DEFINE_BINARY_OP_VARIANTS
+		#undef DefBinaryOpFriend
 		
 	};
 	
