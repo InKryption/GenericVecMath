@@ -2,6 +2,8 @@
 #define INK_MATH_VECTOR_HEADER_FILE_GUARD
 
 #include <cstdlib>
+#include <utility>
+#include <tuple>
 #include <concepts>
 
 namespace ink {
@@ -217,9 +219,9 @@ namespace ink {
 				std::convertible_to<typename base_Y::ctr_arg> auto&& y,
 				std::convertible_to<typename base_Z::ctr_arg> auto&& z)
 					noexcept( noexcept(base_X(x)) && noexcept(base_Y(y)) && noexcept(base_Z(z)) ):
-			base_bo<0>( forward_param<0>( x , y , z ) ),
-			base_bo<1>( forward_param<1>( x , y , z ) ),
-			base_bo<2>( forward_param<2>( x , y , z ) ) {}
+			base_bo<0>( forward_param<0>( std::forward<decltype(x)>(x) , std::forward<decltype(y)>(y) , std::forward<decltype(z)>(z) ) ),
+			base_bo<1>( forward_param<1>( std::forward<decltype(x)>(x) , std::forward<decltype(y)>(y) , std::forward<decltype(z)>(z) ) ),
+			base_bo<2>( forward_param<2>( std::forward<decltype(x)>(x) , std::forward<decltype(y)>(y) , std::forward<decltype(z)>(z) ) ) {}
 			
 		};
 		
@@ -259,20 +261,20 @@ namespace ink {
 			std::convertible_to<ctr_Y> auto && y,
 			std::convertible_to<ctr_Z> auto && z)
 		noexcept(noexcept( base( x , y , z ) ))
-		: base( x , y , z ) {}
+		: base( std::forward<decltype(x)>(x) , std::forward<decltype(y)>(y) , std::forward<decltype(z)>(z) ) {}
 		
 		public: constexpr
 		Vec(std::convertible_to<ctr_X> auto&& x,
 			std::convertible_to<ctr_Y> auto&& y)
 		noexcept(noexcept( base( x , y , ctr_Z() ) ))
 		requires( std::default_initializable<axis_Z> || axis_Z::is_void )
-		: base( x , y , ctr_Z() ) {}
+		: base( std::forward<decltype(x)>(x) , std::forward<decltype(y)>(y) , ctr_Z() ) {}
 		
 		public: constexpr
 		Vec(std::convertible_to<ctr_X> auto&& x)
 		noexcept(noexcept( base( x , ctr_Y(), ctr_Z() ) ))
 		requires( (std::default_initializable<axis_Y> || axis_Y::is_void) && (std::default_initializable<axis_Z> || axis_Z::is_void) )
-		: base( x , ctr_Y() , ctr_Z() ) {}
+		: base( std::forward<decltype(x)>(x) , ctr_Y() , ctr_Z() ) {}
 		
 		
 		
@@ -283,7 +285,7 @@ namespace ink {
 			std::convertible_to<ctr_Z> auto&& z)
 		noexcept(noexcept( base( ctr_X() , y , z ) ))
 		requires( axis_X::is_void )
-		: base( ctr_X() , y , z ) {}
+		: base( ctr_X() , std::forward<decltype(y)>(y) , std::forward<decltype(z)>(z) ) {}
 		
 		public: constexpr
 		Vec(std::convertible_to<ctr_X> auto&& x,
@@ -291,6 +293,8 @@ namespace ink {
 		noexcept(noexcept( base( x , ctr_Y() , z) ))
 		requires( axis_Y::is_void )
 		: base( x , ctr_Y() , z ) {}
+		
+		/* Binary Operations */
 		
 		#define DefBinaryOpFriend(op, lhs_spec, rhs_spec)											\
 		public: template<typename RX, typename RY, typename RZ>										\
