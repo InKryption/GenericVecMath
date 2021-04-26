@@ -5,13 +5,20 @@
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
-	constexpr int* nullv = nullptr;
-	constexpr ink::Vec vec1(3, 5, 3);
-	constexpr ink::Vec vec2(1, nullptr, 5ULL);
+	ink::Vec vec1(3, nullptr, 3);
+	ink::Vec vec2(1, 3, 5ULL);
 	
-	constexpr ink::Vec vec_out = vec1 + vec2;
+	auto b = vec1 + vec2;
 	
-	printf("%i %i %llu\n", vec_out.x, vec_out.y, vec_out.z);
+	constexpr ink::detail::Axis<int, ink::Vec<int>::XYZ::Z> a1(3);
+	constexpr ink::detail::Axis<void, ink::Vec<int>::XYZ::Z> a2;
+	
+	
+	
+	int x = 3;
+	ink::Vec<int&, void> f(x);
+	
+	printf("%i\n", 2);
 	
 	return 0;
 }
