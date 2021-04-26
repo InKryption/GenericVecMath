@@ -296,60 +296,60 @@ namespace ink {
 		
 		/* Binary Operations */
 		
-		#define DefBinaryOpFriend(op, lhs_spec, rhs_spec)											\
-		public: template<typename RX, typename RY, typename RZ>										\
-		friend constexpr decltype(auto)																\
-		operator op (Vec lhs_spec lhs, Vec<RX, RY, RZ> rhs_spec rhs) noexcept(						\
-				noexcept( requires(Vec lhs, Vec<RX, RY, RZ> rhs) { { lhs.x op rhs.x } noexcept; } || std::same_as<void, X> || std::same_as<void, RX>)	\
-			&&	noexcept( requires(Vec lhs, Vec<RX, RY, RZ> rhs) { { lhs.y op rhs.y } noexcept; } || std::same_as<void, Y> || std::same_as<void, RY>)	\
-			&&	noexcept( requires(Vec lhs, Vec<RX, RY, RZ> rhs) { { lhs.z op rhs.z } noexcept; } || std::same_as<void, Z> || std::same_as<void, RZ>)	\
-		) requires (																				\
-				(requires(X lhs_spec lhs, RX rhs_spec rhs) { {lhs op rhs}; } || std::same_as<void, X> || std::same_as<void, RX> )						\
-			&&	(requires(Y lhs_spec lhs, RY rhs_spec rhs) { {lhs op rhs}; } || std::same_as<void, Y> || std::same_as<void, RY> )						\
-			&&	(requires(Z lhs_spec lhs, RZ rhs_spec rhs) { {lhs op rhs}; } || std::same_as<void, Z> || std::same_as<void, RZ> )						\
-			&&	!std::same_as<void, X> && !std::same_as<void, Y> && !std::same_as<void, X>)			\
-		{																							\
-			constexpr bool NOEXCEPT_FUNC = noexcept(												\
-					noexcept( requires(Vec lhs, Vec<RX, RY, RZ> rhs) { { lhs.x op rhs.x } noexcept; } || std::same_as<void, X> || std::same_as<void, RX>)	\
-				&&	noexcept( requires(Vec lhs, Vec<RX, RY, RZ> rhs) { { lhs.y op rhs.y } noexcept; } || std::same_as<void, Y> || std::same_as<void, RY>)	\
-				&&	noexcept( requires(Vec lhs, Vec<RX, RY, RZ> rhs) { { lhs.z op rhs.z } noexcept; } || std::same_as<void, Z> || std::same_as<void, RZ>));	\
-			struct Empty { constexpr operator std::nullptr_t() noexcept { return nullptr; } };		\
-			constexpr Empty empty;																	\
-			decltype(auto) x_out = [&]() constexpr noexcept(NOEXCEPT_FUNC) -> decltype(auto) {		\
-				if constexpr( std::same_as<X, void> &&  std::same_as<RX, void>)	return empty;		\
-				if constexpr(!std::same_as<X, void> &&  std::same_as<RX, void>)	return *&lhs.x;		\
-				if constexpr( std::same_as<X, void> && !std::same_as<RX, void>)	return *&rhs.x;		\
-				if constexpr(!std::same_as<X, void> && !std::same_as<RX, void>)						\
-				{ return lhs.x op rhs.x; }															\
-			}();																					\
-			decltype(auto) y_out = [&]() constexpr noexcept(NOEXCEPT_FUNC) -> decltype(auto) {		\
-				if constexpr( std::same_as<Y, void> &&  std::same_as<RY, void>)	return empty;		\
-				if constexpr(!std::same_as<Y, void> &&  std::same_as<RY, void>)	return lhs.y;		\
-				if constexpr( std::same_as<Y, void> && !std::same_as<RY, void>)	return rhs.y;		\
-				if constexpr(!std::same_as<Y, void> && !std::same_as<RY, void>)						\
-				{ return lhs.y op rhs.y; }															\
-			}();																					\
-			decltype(auto) z_out = [&]() constexpr noexcept(NOEXCEPT_FUNC) -> decltype(auto) {		\
-				if constexpr( std::same_as<Z, void> &&  std::same_as<RZ, void>)	return empty;		\
-				if constexpr(!std::same_as<Z, void> &&  std::same_as<RZ, void>)	return lhs.z;		\
-				if constexpr( std::same_as<Z, void> && !std::same_as<RZ, void>)	return rhs.z;		\
-				if constexpr(!std::same_as<Z, void> && !std::same_as<RZ, void>)						\
-				{ return lhs.z op rhs.z; }															\
-			}();																					\
-																									\
-			return Vec<																				\
-			std::conditional_t<( std::same_as<void,X> &&  std::same_as<void,RX>), void,				\
-			std::conditional_t<(!std::same_as<void,X> && !std::same_as<void,RX>), decltype(x_out),	\
-			std::conditional_t<(std::same_as<void,X>), RX, X>>>										\
-			,																						\
-			std::conditional_t<( std::same_as<void,Y> &&  std::same_as<void,RY>), void,				\
-			std::conditional_t<(!std::same_as<void,Y> && !std::same_as<void,RY>), decltype(y_out),	\
-			std::conditional_t<(std::same_as<void,Y>), RY, Y>>>										\
-			,																						\
-			std::conditional_t<( std::same_as<void,Z> &&  std::same_as<void,RZ>), void,				\
-			std::conditional_t<(!std::same_as<void,Z> && !std::same_as<void,RZ>), decltype(z_out),	\
-			std::conditional_t<(std::same_as<void,Z>), RZ, Z>>>										\
-			>( x_out , y_out , z_out );																\
+		#define DefBinaryOpFriend(op, lhs_spec, rhs_spec)																									\
+		public: template<typename RX, typename RY, typename RZ>																								\
+		friend constexpr decltype(auto)																														\
+		operator op (Vec lhs_spec lhs, Vec<RX, RY, RZ> rhs_spec rhs) noexcept(																				\
+					noexcept( requires(X lhs_spec lhs, RX rhs_spec rhs) { { lhs op rhs } noexcept; } || std::same_as<void, X> || std::same_as<void, RX>)	\
+				&&	noexcept( requires(Y lhs_spec lhs, RY rhs_spec rhs) { { lhs op rhs } noexcept; } || std::same_as<void, Y> || std::same_as<void, RY>)	\
+				&&	noexcept( requires(Z lhs_spec lhs, RZ rhs_spec rhs) { { lhs op rhs } noexcept; } || std::same_as<void, Z> || std::same_as<void, RZ>)	\
+		) requires (																																		\
+				(requires(X lhs_spec lhs, RX rhs_spec rhs) { {lhs op rhs}; } || std::same_as<void, X> || std::same_as<void, RX> )							\
+			&&	(requires(Y lhs_spec lhs, RY rhs_spec rhs) { {lhs op rhs}; } || std::same_as<void, Y> || std::same_as<void, RY> )							\
+			&&	(requires(Z lhs_spec lhs, RZ rhs_spec rhs) { {lhs op rhs}; } || std::same_as<void, Z> || std::same_as<void, RZ> )							\
+			&&	!std::same_as<void, X> && !std::same_as<void, Y> && !std::same_as<void, X>)																	\
+		{																																					\
+			constexpr bool NOEXCEPT_FUNC = noexcept(																										\
+					noexcept( requires(X lhs_spec lhs, RX rhs_spec rhs) { { lhs op rhs } noexcept; } || std::same_as<void, X> || std::same_as<void, RX>)	\
+				&&	noexcept( requires(Y lhs_spec lhs, RY rhs_spec rhs) { { lhs op rhs } noexcept; } || std::same_as<void, Y> || std::same_as<void, RY>)	\
+				&&	noexcept( requires(Z lhs_spec lhs, RZ rhs_spec rhs) { { lhs op rhs } noexcept; } || std::same_as<void, Z> || std::same_as<void, RZ>));	\
+			struct Empty { constexpr operator std::nullptr_t() noexcept { return nullptr; } };																\
+			constexpr Empty empty;																															\
+			decltype(auto) x_out = [&]() constexpr noexcept(NOEXCEPT_FUNC) -> decltype(auto) {																\
+				if constexpr( std::same_as<X, void> &&  std::same_as<RX, void>)	return empty;																\
+				if constexpr(!std::same_as<X, void> &&  std::same_as<RX, void>)	return *&lhs.x;																\
+				if constexpr( std::same_as<X, void> && !std::same_as<RX, void>)	return *&rhs.x;																\
+				if constexpr(!std::same_as<X, void> && !std::same_as<RX, void>)																				\
+				{ return lhs.x op rhs.x; }																													\
+			}();																																			\
+			decltype(auto) y_out = [&]() constexpr noexcept(NOEXCEPT_FUNC) -> decltype(auto) {																\
+				if constexpr( std::same_as<Y, void> &&  std::same_as<RY, void>)	return empty;																\
+				if constexpr(!std::same_as<Y, void> &&  std::same_as<RY, void>)	return lhs.y;																\
+				if constexpr( std::same_as<Y, void> && !std::same_as<RY, void>)	return rhs.y;																\
+				if constexpr(!std::same_as<Y, void> && !std::same_as<RY, void>)																				\
+				{ return lhs.y op rhs.y; }																													\
+			}();																																			\
+			decltype(auto) z_out = [&]() constexpr noexcept(NOEXCEPT_FUNC) -> decltype(auto) {																\
+				if constexpr( std::same_as<Z, void> &&  std::same_as<RZ, void>)	return empty;																\
+				if constexpr(!std::same_as<Z, void> &&  std::same_as<RZ, void>)	return lhs.z;																\
+				if constexpr( std::same_as<Z, void> && !std::same_as<RZ, void>)	return rhs.z;																\
+				if constexpr(!std::same_as<Z, void> && !std::same_as<RZ, void>)																				\
+				{ return lhs.z op rhs.z; }																													\
+			}();																																			\
+																																							\
+			return Vec<																																		\
+			std::conditional_t< (std::same_as<void,X> && std::same_as<void,RX>), void,																		\
+			std::conditional_t<!(std::same_as<void,X> || std::same_as<void,RX>), decltype(x_out),															\
+			std::conditional_t<!(std::same_as<void,X>), X, RX>>>																							\
+			,																																				\
+			std::conditional_t< (std::same_as<void,Y> && std::same_as<void,RY>), void,																		\
+			std::conditional_t<!(std::same_as<void,Y> || std::same_as<void,RY>), decltype(y_out),															\
+			std::conditional_t<!(std::same_as<void,Y>), Y, RY>>>																							\
+			,																																				\
+			std::conditional_t<( std::same_as<void,Z> && std::same_as<void,RZ>), void,																		\
+			std::conditional_t<!(std::same_as<void,Z> || std::same_as<void,RZ>), decltype(z_out),															\
+			std::conditional_t<!(std::same_as<void,Z>), Z, RZ>>>																							\
+			>( x_out , y_out , z_out );																														\
 		}
 		#define DEFINE_BINARY_OP_VARIANTS(op)				\
 			DefBinaryOpFriend(op,	&,			&		)	\

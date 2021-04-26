@@ -5,7 +5,7 @@
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
-	
+	constexpr int* nullv = nullptr;
 	constexpr ink::Vec vec1(3, 5, 3);
 	constexpr ink::Vec vec2(1, nullptr, 5ULL);
 	
