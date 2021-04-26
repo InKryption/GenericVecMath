@@ -169,7 +169,7 @@ namespace ink {
 			template<typename U> requires(!(std::same_as<void, T> || std::same_as<void, U>))						\
 			friend constexpr decltype(auto)																			\
 			operator op(std::convertible_to<Axis const&> auto&& lhs, Axis<U, tag> rhs_spec rhs)						\
-				noexcept(noexcept( lhs.data() op rhs.data() ))														\
+				noexcept(noexcept( lhs.data() op rhs.data()	))														\
 			{ return Axis<decltype(lhs.data() op rhs.data()), tag>( lhs.data() op rhs.data() ); }					\
 																													\
 			friend constexpr decltype(auto)																			\
@@ -338,41 +338,54 @@ namespace ink {
 		requires( axis_Y::is_void )
 		: base( x , ctr_Y() , z ) {}
 		
-		private: template<base::XYZ tag> constexpr decltype(auto)
-		get_axis() noexcept
-		{ return *static_cast<base::template base<tag> *>(this); }
-		
-		private: template<base::XYZ tag> constexpr decltype(auto)
-		get_axis() const noexcept
-		{ return *static_cast<base::template base<tag> const*>(this); }
-		
-		#define BINARY_OP(op, rhs_spec)															\
+		#define BINARY_OP(op, rhs_spec)									\
 		public: template<typename RX, typename RY, typename RZ> friend constexpr decltype(auto)	\
 		operator op(std::convertible_to<Vec const&> auto&& lhs, Vec<RX, RY, RZ> rhs_spec rhs)	\
 		{																\
-			auto&& lhs_x_axis = static_cast<axis_X&>(lhs);				\
-			auto&& lhs_y_axis = static_cast<axis_Y&>(lhs);				\
-			auto&& lhs_z_axis = static_cast<axis_Z&>(lhs);				\
+			auto& lhs_x_axis = static_cast<axis_X const&>(lhs);			\
+			auto& lhs_y_axis = static_cast<axis_Y const&>(lhs);			\
+			auto& lhs_z_axis = static_cast<axis_Z const&>(lhs);			\
 																		\
-			auto&& rhs_x_axis = static_cast<detail::Axis<RX, base::XYZ::X> rhs_spec>(rhs);	\
-			auto&& rhs_y_axis = static_cast<detail::Axis<RY, base::XYZ::Y> rhs_spec>(rhs);	\
-			auto&& rhs_z_axis = static_cast<detail::Axis<RZ, base::XYZ::Z> rhs_spec>(rhs);	\
+			auto& rhs_x_axis = static_cast<detail::Axis<RX, base::XYZ::X> const&>(rhs);	\
+			auto& rhs_y_axis = static_cast<detail::Axis<RY, base::XYZ::Y> const&>(rhs);	\
+			auto& rhs_z_axis = static_cast<detail::Axis<RZ, base::XYZ::Z> const&>(rhs);	\
+																		\
+			using OX = typename std::remove_reference_t					\
+			<decltype( lhs_x_axis op rhs_x_axis )>::value_type;			\
+																		\
+			using OY = typename std::remove_reference_t					\
+			<decltype( lhs_y_axis op rhs_y_axis )>::value_type;			\
+																		\
+			using OZ = typename std::remove_reference_t					\
+			<decltype( lhs_z_axis op rhs_z_axis )>::value_type;			\
 																		\
 			return														\
-			Vec<														\
-			typename decltype( lhs_x_axis + rhs_x_axis )::value_type,	\
-			typename decltype( lhs_y_axis + rhs_y_axis )::value_type,	\
-			typename decltype( lhs_z_axis + rhs_z_axis )::value_type	\
-			>(															\
-				(lhs_x_axis + rhs_x_axis).data(),						\
-				(lhs_y_axis + rhs_y_axis).data(),						\
-				(lhs_z_axis + rhs_z_axis).data()						\
+			Vec<OX, OY, OZ>(											\
+				(lhs_x_axis op rhs_x_axis).data(),						\
+				(lhs_y_axis op rhs_y_axis).data(),						\
+				(lhs_z_axis op rhs_z_axis).data()						\
 			);															\
 		}
 		
 		BINARY_OP(+, &)
 		BINARY_OP(+, &&)
 		BINARY_OP(+, const&)
+		
+		BINARY_OP(-, &)
+		BINARY_OP(-, &&)
+		BINARY_OP(-, const&)
+		
+		BINARY_OP(*, &)
+		BINARY_OP(*, &&)
+		BINARY_OP(*, const&)
+		
+		BINARY_OP(/, &)
+		BINARY_OP(/, &&)
+		BINARY_OP(/, const&)
+		
+		BINARY_OP(%, &)
+		BINARY_OP(%, &&)
+		BINARY_OP(%, const&)
 		
 		#undef BINARY_OP
 		
