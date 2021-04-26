@@ -8,13 +8,13 @@
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
 	
-	
-	constexpr ink::Vec vec1(3, 5, true);
+	constexpr void* b = nullptr;
+	constexpr ink::Vec vec1(3, 5, b);
 	constexpr ink::Vec vec2(1, nullptr, true);
 	
-	constexpr ink::Vec out = vec1 + vec2;
+	ink::Vec vec_out = vec1 + vec2;
 	
-	printf("%i %i %i\n", out.x, out.y, out.z);
+	printf("%i %i %i\n", vec_out.x, vec_out.y, vec_out.z);
 	
 	return 0;
 }

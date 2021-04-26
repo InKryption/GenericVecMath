@@ -292,12 +292,6 @@ namespace ink {
 		requires( axis_Y::is_void )
 		: base( x , ctr_Y() , z ) {}
 		
-		#if defined(__GNUC__)
-		#define ATTRIBUTE_UNUSED __attribute__((unused))
-		#else
-		#define ATTRIBUTE_UNUSED
-		#endif
-		
 		#define DefBinaryOpFriend(op, lhs_spec, rhs_spec)											\
 		public: template<typename RX, typename RY, typename RZ>										\
 		friend constexpr decltype(auto)																\
@@ -353,7 +347,6 @@ namespace ink {
 			std::conditional_t<(std::same_as<void,Z>), RZ, Z>>>										\
 			>( x_out , y_out , z_out );																\
 		}
-		
 		#define DEFINE_BINARY_OP_VARIANTS(op)				\
 			DefBinaryOpFriend(op,	&,			&		)	\
 			DefBinaryOpFriend(op,	&,			&&		)	\
@@ -363,15 +356,25 @@ namespace ink {
 			DefBinaryOpFriend(op,	&&,			const&	)	\
 			DefBinaryOpFriend(op,	const&,		&		)	\
 			DefBinaryOpFriend(op,	const&,		&&		)	\
-			DefBinaryOpFriend(op,	const&,		const&	)	\
-		
-		#define BinaryOps(m) m(+) m(-) m(*) m(/) m(%) m(&) m(|) m(^) m(&&) m(||) m(==) m(!=) m(<) m(>) m(<=) m(>=)
-		BinaryOps(DEFINE_BINARY_OP_VARIANTS)
-		
-		#undef BinaryOps
+			DefBinaryOpFriend(op,	const&,		const&	)
+		DEFINE_BINARY_OP_VARIANTS(+)
+		DEFINE_BINARY_OP_VARIANTS(-)
+		DEFINE_BINARY_OP_VARIANTS(*)
+		DEFINE_BINARY_OP_VARIANTS(/)
+		DEFINE_BINARY_OP_VARIANTS(%)
+		DEFINE_BINARY_OP_VARIANTS(&)
+		DEFINE_BINARY_OP_VARIANTS(|)
+		DEFINE_BINARY_OP_VARIANTS(^)
+		DEFINE_BINARY_OP_VARIANTS(&&)
+		DEFINE_BINARY_OP_VARIANTS(||)
+		DEFINE_BINARY_OP_VARIANTS(==)
+		DEFINE_BINARY_OP_VARIANTS(!=)
+		DEFINE_BINARY_OP_VARIANTS(<)
+		DEFINE_BINARY_OP_VARIANTS(>)
+		DEFINE_BINARY_OP_VARIANTS(<=)
+		DEFINE_BINARY_OP_VARIANTS(>=)
 		#undef DEFINE_BINARY_OP_VARIANTS
 		#undef DefBinaryOpFriend
-		
 	};
 	
 	/* Template Deduction Guides */
