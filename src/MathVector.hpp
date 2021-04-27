@@ -120,6 +120,9 @@ namespace ink {
 			
 			template<typename, XYZ> friend struct Axis;
 			
+			protected: static constexpr bool
+			is_void = std::same_as<void, T>;
+			
 			protected: using
 			base = AxisBase<T, tag>;
 			
@@ -174,14 +177,13 @@ namespace ink {
 																													\
 			friend constexpr decltype(auto)																			\
 			operator op(std::convertible_to<Axis const&> auto&& lhs, [[maybe_unused]] Axis<void, tag> rhs_spec rhs)	\
-			noexcept requires(!std::same_as<void, T>)																\
+				noexcept requires(!std::same_as<void, T>)															\
 			{ return lhs; }																							\
 																													\
 			friend constexpr decltype(auto)																			\
 			operator op([[maybe_unused]] Axis<void, tag> rhs_spec lhs, std::convertible_to<Axis const&> auto&& rhs)	\
-			noexcept requires(!std::same_as<void, T>)																\
-			{ return rhs; }																							\
-			
+				noexcept requires(!std::same_as<void, T>)															\
+			{ return rhs; }
 			BINARY_OP(+, &)
 			BINARY_OP(+, &&)
 			BINARY_OP(+, const&)
@@ -201,11 +203,28 @@ namespace ink {
 			BINARY_OP(%, &)
 			BINARY_OP(%, &&)
 			BINARY_OP(%, const&)
-			
 			#undef BINARY_OP
 			
-			protected: static constexpr bool
-			is_void = std::same_as<void, T>;
+			#define UNARY_OP(op)	\
+			friend constexpr decltype(auto)	\
+			operator op(std::convertible_to<Axis const&> auto&& v)	\
+				noexcept(noexcept(op v))	\
+				requires (requires(T t) { (op t); } && !Axis::is_void)	\
+			{ return Axis<decltype(op v), tag>(op v); }	\
+			friend constexpr decltype(auto)	\
+			operator op(std::convertible_to<Axis const&> auto&& v)	\
+				noexcept(noexcept(op v))	\
+				requires (requires(T t) { (op t); } && Axis::is_void)	\
+			{ return v; }	\
+			
+			
+			
+			UNARY_OP(!)
+			UNARY_OP(+)
+			UNARY_OP(-)
+			
+			#undef UNARY_OP
+			
 			
 		};
 		
@@ -366,7 +385,6 @@ namespace ink {
 				(lhs_z_axis op rhs_z_axis).data()						\
 			);															\
 		}
-		
 		BINARY_OP(+, &)
 		BINARY_OP(+, &&)
 		BINARY_OP(+, const&)
@@ -386,8 +404,13 @@ namespace ink {
 		BINARY_OP(%, &)
 		BINARY_OP(%, &&)
 		BINARY_OP(%, const&)
-		
 		#undef BINARY_OP
+		
+		#define UNARY_OP(op)
+		
+		
+		
+		#undef UNARY_OP
 		
 	};
 	
