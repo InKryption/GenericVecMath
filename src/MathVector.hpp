@@ -60,63 +60,6 @@ namespace ink {
 		template<typename... T>
 		using AlignTypes_t = typename AlignTypes<T...>::type;
 		
-		
-		
-		template<auto... CMP>
-		struct Switch;
-
-		template<>
-		struct Switch<> {
-			template<auto V, typename T> struct Case {};
-		};
-
-		/* A template construct that serves a similar purpose to std::conditional_t, utilizing a very different format */
-		template<auto CMP>
-		struct Switch<CMP> {
-
-			using cmp_t = decltype(CMP);
-			
-			template<cmp_t V, typename T>
-			using Case = Switch<>::Case<V, T>;
-
-			template<typename... CASES>
-			struct In_impl;
-
-			template<cmp_t V1, typename T1, cmp_t... Vs, typename... Ts>
-			requires( V1 != CMP )
-			struct In_impl<Case<V1, T1>, Case<Vs, Ts>...>
-			{ using type = typename In_impl<Case<Vs, Ts>...>::type; };
-
-			template<cmp_t V1, typename T1, cmp_t... Vs, typename... Ts>
-			requires( V1 == CMP )
-			struct In_impl<Case<V1, T1>, Case<Vs, Ts>...>
-			{ using type = T1; };
-
-			template<typename... CASES>
-			using In = typename In_impl<CASES...>::type;
-			
-		};
-		
-		template<auto CMP, typename... cases>
-		using Switch_t = Switch<CMP>::template In<cases...>;
-		
-		
-		
-		template<typename T, typename U>
-		struct CommonTemplate: std::false_type {};
-		
-		template<typename T, typename U> static constexpr bool
-		CommonTemplate_v = CommonTemplate<T, U>::value;
-		
-		template<template<typename...> typename Template, typename... T, typename... U>
-		struct CommonTemplate<Template<T...>, Template<U...>>: std::true_type {};
-		
-		template<template<auto...> typename Template, auto... t, auto... u>
-		struct CommonTemplate<Template<t...>, Template<u...>>: std::true_type {};
-		
-		template<template<typename, auto...> typename Template, typename T, auto... t, typename U, auto... u>
-		struct CommonTemplate<Template<T, t...>, Template<U, u...>>: std::true_type {};
-		
 	}
 	
 	template<typename X, typename Y, typename Z> class Vec;
@@ -268,6 +211,7 @@ namespace ink {
 		};
 		
 		
+		
 		template<typename A1, typename A2, typename A3>
 		struct VecBase;
 		
@@ -301,8 +245,7 @@ namespace ink {
 			&&	(tag3 == tag3_eq);
 			
 			public: constexpr
-			VecBase()
-			noexcept(true)
+			VecBase() noexcept( noexcept(base1()) && noexcept(base2()) && noexcept(base3()) )
 			requires(	std::default_initializable<base1>
 			&&			std::default_initializable<base2>
 			&&			std::default_initializable<base3>)
@@ -423,12 +366,6 @@ namespace ink {
 	template<typename X> Vec(X, std::nullptr_t, std::nullptr_t) -> Vec<X, void, void>;
 	template<typename Y> Vec(std::nullptr_t, Y, std::nullptr_t) -> Vec<void, Y, void>;
 	template<typename Z> Vec(std::nullptr_t, std::nullptr_t, Z) -> Vec<void, void, Z>;
-	
-	void f() {
-		constexpr void* vp = nullptr;
-		constexpr auto b = Vec(3,nullptr,2);
-		
-	}
 	
 }
 
