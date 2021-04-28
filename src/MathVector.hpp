@@ -93,15 +93,77 @@ namespace ink {
 			using In = typename In_impl<CASES...>::type;
 
 		};
-
+		
 		template<auto CMP, typename... cases>
 		using Switch_t = Switch<CMP>::template In<cases...>;
-
+		
+		
+		
 	}
 	
 	template<typename X, typename Y, typename Z> class Vec;
 	
 	namespace detail {
+		
+		// This is a utility construct; it can be operated on with anything, but always produce a noop,
+		// either returning the other operated variable reference, or itself in the case of unary operations.
+		// This applies as well to operations involving comparisons. 
+		// Note: can be constructed from a nullptr.
+		// It's an empty struch, therefore should be fine to decorate this with [[no_unique_address]].
+		struct Noop {
+			
+			constexpr Noop() noexcept {}
+			constexpr Noop(std::nullptr_t) noexcept {}
+			
+			#define BinaryOp(op)	\
+			friend constexpr decltype(auto) operator op(Noop, auto&& rhs) noexcept { return rhs; }	\
+			friend constexpr decltype(auto) operator op(auto&& lhs, Noop) noexcept { return lhs; }	\
+			friend constexpr decltype(auto) operator op(Noop, Noop) noexcept { return Noop(); }
+			BinaryOp(+)	BinaryOp(-)
+			BinaryOp(*)	BinaryOp(/)	BinaryOp(%)
+			BinaryOp(&)	BinaryOp(|)	BinaryOp(^)
+			BinaryOp(<<)
+			BinaryOp(>>)
+			#undef BinaryOp
+			
+			#define UnaryOp(op)	\
+			friend constexpr decltype(auto) operator op(Noop noop) noexcept { return noop; }
+			UnaryOp(+)	UnaryOp(-)
+			UnaryOp(*)	UnaryOp(&)
+			UnaryOp(!)	UnaryOp(~)
+			#undef UnaryOp
+			
+			#define BoolOp(op)	\
+			template<typename T> requires(!std::convertible_to<T, Noop const&>) friend constexpr decltype(auto) operator op(Noop, T&& rhs) noexcept { return rhs; }	\
+			template<typename T> requires(!std::convertible_to<T, Noop const&>) friend constexpr decltype(auto) operator op(T&& lhs, Noop) noexcept { return lhs; }
+			BoolOp(&&)	BoolOp(||)
+			BoolOp(==)	BoolOp(!=)
+			BoolOp(>=)	BoolOp(<=)
+			BoolOp(>)	BoolOp(<)
+			BoolOp(<=>)
+			#undef BoolOp
+			
+			#define NoopCmp(op)	\
+			friend constexpr decltype(auto) operator op(Noop, Noop) noexcept { return Noop(); }
+			NoopCmp(==)	NoopCmp(!=)
+			NoopCmp(>=)	NoopCmp(<=)
+			NoopCmp(>)	NoopCmp(<)
+			#undef NoopCmp
+			
+			template<typename T> constexpr decltype(auto)
+			operator=(T&&)
+			{ return *this; }
+			
+			template<typename... Args> constexpr decltype(auto)
+			operator()(Args&&...) noexcept
+			{ return *this; }
+			
+			template<typename T> constexpr decltype(auto)
+			operator[](T&&) noexcept
+			{ return *this; }
+			
+		};
+		
 		
 		template<typename T>
 		concept non_void = (!std::same_as<void, T>);
@@ -113,12 +175,17 @@ namespace ink {
 		template<non_void T>	struct AxisBase<T, XYZ::X> { T x; };
 		template<non_void T>	struct AxisBase<T, XYZ::Y> { T y; };
 		template<non_void T>	struct AxisBase<T, XYZ::Z> { T z; };
-		template<XYZ tag>		struct AxisBase<void, tag> { constexpr AxisBase(std::nullptr_t = nullptr) noexcept {} };
+		
+		template<>				struct AxisBase<void, XYZ::X> { [[no_unique_address]] Noop x; };
+		template<>				struct AxisBase<void, XYZ::Y> { [[no_unique_address]] Noop y; };
+		template<>				struct AxisBase<void, XYZ::Z> { [[no_unique_address]] Noop z; };
 		
 		template<typename T, XYZ tag>
 		struct Axis: public AxisBase<T, tag> {
 			
 			template<typename, XYZ> friend struct Axis;
+			template<typename, typename, typename> struct VecBase;
+			template<typename X, typename Y, typename Z> class Vec;
 			
 			protected: static constexpr bool
 			is_void = std::same_as<void, T>;
@@ -130,101 +197,194 @@ namespace ink {
 			value_type = T;
 			
 			protected: using
-			ctr_arg = std::conditional_t<std::same_as<T, void>, std::nullptr_t, T>;
-			
-			private: template<typename... Arg> static constexpr bool
-			NOEXCEPT_CTR = noexcept(base{std::forward<Arg>(std::declval<Arg>())...});
-			
-			public: constexpr decltype(auto)
-			data() noexcept
-			{
-				if constexpr(std::same_as<void, T>) return *this;
-				else {
-					if constexpr(tag == XYZ::X) return *std::addressof(this->x);
-					if constexpr(tag == XYZ::Y) return *std::addressof(this->y);
-					if constexpr(tag == XYZ::Z) return *std::addressof(this->z);
-				}
-			}
-			
-			public: constexpr decltype(auto)
-			data() const noexcept
-			{
-
-				if constexpr(std::same_as<void, T>) return *this;
-				else {
-					if constexpr(tag == XYZ::X) return *std::addressof(this->x);
-					if constexpr(tag == XYZ::Y) return *std::addressof(this->y);
-					if constexpr(tag == XYZ::Z) return *std::addressof(this->z);
-				}
-
-			}
+			ctr_arg = std::conditional_t<std::same_as<T, void>, Noop, T>;
 			
 			public: constexpr
-			Axis() noexcept(NOEXCEPT_CTR<>)
+			Axis() noexcept(noexcept(base{}))
 			requires(std::default_initializable<base>):
 			base{} {}
-
+			
 			public: constexpr
 			Axis(std::convertible_to<ctr_arg> auto&& v) noexcept(noexcept( base{std::forward<decltype(v)>(v)} ))
 			: base{std::forward<decltype(v)>(v)} {}
 			
-			#define BINARY_OP(op, rhs_spec)																			\
-			template<typename U> requires(!(std::same_as<void, T> || std::same_as<void, U>))						\
-			friend constexpr decltype(auto)																			\
-			operator op(std::convertible_to<Axis const&> auto&& lhs, Axis<U, tag> rhs_spec rhs)						\
-				noexcept(noexcept( lhs.data() op rhs.data()	))														\
-			{ return Axis<decltype(lhs.data() op rhs.data()), tag>( lhs.data() op rhs.data() ); }					\
-																													\
-			friend constexpr decltype(auto)																			\
-			operator op(std::convertible_to<Axis const&> auto&& lhs, [[maybe_unused]] Axis<void, tag> rhs_spec rhs)	\
-				noexcept requires(!std::same_as<void, T>)															\
-			{ return lhs; }																							\
-																													\
-			friend constexpr decltype(auto)																			\
-			operator op([[maybe_unused]] Axis<void, tag> rhs_spec lhs, std::convertible_to<Axis const&> auto&& rhs)	\
-				noexcept requires(!std::same_as<void, T>)															\
-			{ return rhs; }
-			BINARY_OP(+, &)
-			BINARY_OP(+, &&)
-			BINARY_OP(+, const&)
+			public: template<std::convertible_to<T> U> requires(tag == XYZ::X) constexpr
+			Axis(Axis<U, tag> const& other) noexcept(noexcept( base{std::forward<decltype(other.get_axis_data())>(other.get_axis_data())} ))
+			: base{std::forward<decltype(other.get_axis_data())>(other.get_axis_data())} {}
 			
-			BINARY_OP(-, &)
-			BINARY_OP(-, &&)
-			BINARY_OP(-, const&)
+			private: constexpr auto&
+			get_axis_data() noexcept {
+				if constexpr(tag == XYZ::X) return this->x;
+				if constexpr(tag == XYZ::Y) return this->y;
+				if constexpr(tag == XYZ::Z) return this->z;
+			}
 			
-			BINARY_OP(*, &)
-			BINARY_OP(*, &&)
-			BINARY_OP(*, const&)
+			private: constexpr auto&
+			get_axis_data() const noexcept {
+				if constexpr(tag == XYZ::X) return this->x;
+				if constexpr(tag == XYZ::Y) return this->y;
+				if constexpr(tag == XYZ::Z) return this->z;
+			}
 			
-			BINARY_OP(/, &)
-			BINARY_OP(/, &&)
-			BINARY_OP(/, const&)
+			public: friend constexpr decltype(auto)
+			operator+(std::convertible_to<Axis const&> auto&& lhs, auto&& rhs)
+			noexcept(noexcept(lhs.get_axis_data() + rhs.get_axis_data()))
+			requires requires(decltype(lhs) l, decltype(rhs) r)
+			{ {l.get_axis_data() + r.get_axis_data()}; }
+			{
+				return Axis<decltype(lhs.get_axis_data() + rhs.get_axis_data()), tag>
+				(lhs.get_axis_data() + rhs.get_axis_data());
+			}
 			
-			BINARY_OP(%, &)
-			BINARY_OP(%, &&)
-			BINARY_OP(%, const&)
-			#undef BINARY_OP
+			public: friend constexpr decltype(auto)
+			operator+(std::convertible_to<Axis const&> auto&& v)
+			noexcept(noexcept(+v.get_axis_data()))
+			requires requires(decltype(v) v)
+			{ {+v.get_axis_data()}; }
+			{
+				return Axis<decltype(+v.get_axis_data()), tag>
+				(+v.get_axis_data());
+			}
 			
-			#define UNARY_OP(op)	\
-			friend constexpr decltype(auto)	\
-			operator op(std::convertible_to<Axis const&> auto&& v)	\
-				noexcept(noexcept(op v))	\
-				requires (requires(T t) { (op t); } && !Axis::is_void)	\
-			{ return Axis<decltype(op v), tag>(op v); }	\
-			friend constexpr decltype(auto)	\
-			operator op(std::convertible_to<Axis const&> auto&& v)	\
-				noexcept(noexcept(op v))	\
-				requires (requires(T t) { (op t); } && Axis::is_void)	\
-			{ return v; }	\
+			public: friend constexpr decltype(auto)
+			operator-(std::convertible_to<Axis const&> auto&& lhs, auto&& rhs)
+			noexcept(noexcept(lhs.get_axis_data() - rhs.get_axis_data()))
+			requires requires(decltype(lhs) l, decltype(rhs) r)
+			{ {l.get_axis_data() - r.get_axis_data()}; }
+			{
+				return Axis<decltype(lhs.get_axis_data() - rhs.get_axis_data()), tag>
+				(lhs.get_axis_data() - rhs.get_axis_data());
+			}
 			
+			public: friend constexpr decltype(auto)
+			operator-(std::convertible_to<Axis const&> auto&& v)
+			noexcept(noexcept((-v.get_axis_data())))
+			requires requires(decltype(v) v)
+			{ {-v.get_axis_data()}; }
+			{
+				return Axis<decltype(-v.get_axis_data()), tag>
+				(-v.get_axis_data());
+			}
 			
+			public: friend constexpr decltype(auto)
+			operator*(std::convertible_to<Axis const&> auto&& lhs, auto&& rhs)
+			noexcept(noexcept(lhs.get_axis_data() * rhs.get_axis_data()))
+			requires requires(decltype(lhs) l, decltype(rhs) r)
+			{ {l.get_axis_data() * r.get_axis_data()}; }
+			{
+				return Axis<decltype(lhs.get_axis_data() * rhs.get_axis_data()), tag>
+				(lhs.get_axis_data() * rhs.get_axis_data());
+			}
 			
-			UNARY_OP(!)
-			UNARY_OP(+)
-			UNARY_OP(-)
+			public: friend constexpr decltype(auto)
+			operator/(std::convertible_to<Axis const&> auto&& lhs, auto&& rhs)
+			noexcept(noexcept(lhs.get_axis_data() / rhs.get_axis_data()))
+			requires requires(decltype(lhs) l, decltype(rhs) r)
+			{ {l.get_axis_data() / r.get_axis_data()}; }
+			{
+				return Axis<decltype(lhs.get_axis_data() / rhs.get_axis_data()), tag>
+				(lhs.get_axis_data() / rhs.get_axis_data());
+			}
 			
-			#undef UNARY_OP
+			public: friend constexpr decltype(auto)
+			operator%(std::convertible_to<Axis const&> auto&& lhs, auto&& rhs)
+			noexcept(noexcept(lhs.get_axis_data() % rhs.get_axis_data()))
+			requires requires(decltype(lhs) l, decltype(rhs) r)
+			{ {l.get_axis_data() % r.get_axis_data()}; }
+			{
+				return Axis<decltype(lhs.get_axis_data() % rhs.get_axis_data()), tag>
+				(lhs.get_axis_data() % rhs.get_axis_data());
+			}
 			
+			public: friend constexpr decltype(auto)
+			operator!(std::convertible_to<Axis const&> auto&& v)
+			noexcept(noexcept(!v.get_axis_data()))
+			requires requires(decltype(v) v)
+			{ {!v.get_axis_data()}; }
+			{
+				return Axis<decltype(!v.get_axis_data()), tag>
+				(!v.get_axis_data());
+			}
+			
+			public: friend constexpr decltype(auto)
+			operator==(std::convertible_to<Axis const&> auto&& lhs, auto&& rhs)
+			noexcept(noexcept(lhs.get_axis_data() == rhs.get_axis_data()))
+			requires requires(decltype(lhs) l, decltype(rhs) r)
+			{ {l.get_axis_data() == r.get_axis_data()}; }
+			{
+				return Axis<decltype(lhs.get_axis_data() == rhs.get_axis_data()), tag>
+				(lhs.get_axis_data() == rhs.get_axis_data());
+			}
+			
+			public: friend constexpr decltype(auto)
+			operator!=(std::convertible_to<Axis const&> auto&& lhs, auto&& rhs)
+			noexcept(noexcept(lhs.get_axis_data() != rhs.get_axis_data()))
+			requires requires(decltype(lhs) l, decltype(rhs) r)
+			{ {l.get_axis_data() != r.get_axis_data()}; }
+			{
+				return Axis<decltype(lhs.get_axis_data() != rhs.get_axis_data()), tag>
+				(lhs.get_axis_data() != rhs.get_axis_data());
+			}
+			
+			public: friend constexpr decltype(auto)
+			operator>=(std::convertible_to<Axis const&> auto&& lhs, auto&& rhs)
+			noexcept(noexcept(lhs.get_axis_data() >= rhs.get_axis_data()))
+			requires requires(decltype(lhs) l, decltype(rhs) r)
+			{ {l.get_axis_data() >= r.get_axis_data()}; }
+			{
+				return Axis<decltype(lhs.get_axis_data() >= rhs.get_axis_data()), tag>
+				(lhs.get_axis_data() >= rhs.get_axis_data());
+			}
+			
+			public: friend constexpr decltype(auto)
+			operator<=(std::convertible_to<Axis const&> auto&& lhs, auto&& rhs)
+			noexcept(noexcept(lhs.get_axis_data() <= rhs.get_axis_data()))
+			requires requires(decltype(lhs) l, decltype(rhs) r)
+			{ {l.get_axis_data() <= r.get_axis_data()}; }
+			{
+				return Axis<decltype(lhs.get_axis_data() <= rhs.get_axis_data()), tag>
+				(lhs.get_axis_data() <= rhs.get_axis_data());
+			}
+			
+			public: friend constexpr decltype(auto)
+			operator>(std::convertible_to<Axis const&> auto&& lhs, auto&& rhs)
+			noexcept(noexcept(lhs.get_axis_data() > rhs.get_axis_data()))
+			requires requires(decltype(lhs) l, decltype(rhs) r)
+			{ {l.get_axis_data() > r.get_axis_data()}; }
+			{
+				return Axis<decltype(lhs.get_axis_data() > rhs.get_axis_data()), tag>
+				(lhs.get_axis_data() > rhs.get_axis_data());
+			}
+			
+			public: friend constexpr decltype(auto)
+			operator<(std::convertible_to<Axis const&> auto&& lhs, auto&& rhs)
+			noexcept(noexcept(lhs.get_axis_data() < rhs.get_axis_data()))
+			requires requires(decltype(lhs) l, decltype(rhs) r)
+			{ {l.get_axis_data() < r.get_axis_data()}; }
+			{
+				return Axis<decltype(lhs.get_axis_data() > rhs.get_axis_data()), tag>
+				(lhs.get_axis_data() < rhs.get_axis_data());
+			}
+			
+			public: friend constexpr decltype(auto)
+			operator&&(std::convertible_to<Axis const&> auto&& lhs, auto&& rhs)
+			noexcept(noexcept(lhs.get_axis_data() && rhs.get_axis_data()))
+			requires requires(decltype(lhs) l, decltype(rhs) r)
+			{ {l.get_axis_data() && r.get_axis_data()}; }
+			{
+				return Axis<decltype(lhs.get_axis_data() && rhs.get_axis_data()), tag>
+				(lhs.get_axis_data() && rhs.get_axis_data());
+			}
+			
+			public: friend constexpr decltype(auto)
+			operator||(std::convertible_to<Axis const&> auto&& lhs, auto&& rhs)
+			noexcept(noexcept(lhs.get_axis_data() || rhs.get_axis_data()))
+			requires requires(decltype(lhs) l, decltype(rhs) r)
+			{ {l.get_axis_data() || r.get_axis_data()}; }
+			{
+				return Axis<decltype(lhs.get_axis_data() || rhs.get_axis_data()), tag>
+				(lhs.get_axis_data() || rhs.get_axis_data());
+			}
 			
 		};
 		
@@ -237,6 +397,10 @@ namespace ink {
 			public AxisByAlignment<1, X, Y, Z>,
 			public AxisByAlignment<2, X, Y, Z>
 		{
+			
+			template<typename, XYZ> friend struct Axis;
+			template<typename, typename, typename> friend struct VecBase;
+			template<typename, typename, typename> friend class ink::Vec;
 			
 			public: using XYZ = detail::XYZ;
 			
@@ -281,9 +445,6 @@ namespace ink {
 			base_bo<1>( forward_param<1>( std::forward<decltype(x)>(x) , std::forward<decltype(y)>(y) , std::forward<decltype(z)>(z) ) ),
 			base_bo<2>( forward_param<2>( std::forward<decltype(x)>(x) , std::forward<decltype(y)>(y) , std::forward<decltype(z)>(z) ) ) {}
 			
-			public: template<size_t i> constexpr
-			operator base_bo<i>() = delete;
-			
 		};
 		
 	}
@@ -296,6 +457,11 @@ namespace ink {
 		
 		private: using
 		base = detail::VecBase<X, Y, Z>;
+		
+		public: using XYZ = base::XYZ;
+		
+		private: template<typename T, XYZ tag>
+		using Axis = detail::Axis<T, tag>;
 		
 		private: using axis_X = typename base::base_X;
 		private: using axis_Y = typename base::base_Y;
@@ -357,60 +523,45 @@ namespace ink {
 		requires( axis_Y::is_void )
 		: base( x , ctr_Y() , z ) {}
 		
-		#define BINARY_OP(op, rhs_spec)									\
-		public: template<typename RX, typename RY, typename RZ> friend constexpr decltype(auto)	\
-		operator op(std::convertible_to<Vec const&> auto&& lhs, Vec<RX, RY, RZ> rhs_spec rhs)	\
-		{																\
-			auto& lhs_x_axis = static_cast<axis_X const&>(lhs);			\
-			auto& lhs_y_axis = static_cast<axis_Y const&>(lhs);			\
-			auto& lhs_z_axis = static_cast<axis_Z const&>(lhs);			\
-																		\
-			auto& rhs_x_axis = static_cast<detail::Axis<RX, base::XYZ::X> const&>(rhs);	\
-			auto& rhs_y_axis = static_cast<detail::Axis<RY, base::XYZ::Y> const&>(rhs);	\
-			auto& rhs_z_axis = static_cast<detail::Axis<RZ, base::XYZ::Z> const&>(rhs);	\
-																		\
-			using OX = typename std::remove_reference_t					\
-			<decltype( lhs_x_axis op rhs_x_axis )>::value_type;			\
-																		\
-			using OY = typename std::remove_reference_t					\
-			<decltype( lhs_y_axis op rhs_y_axis )>::value_type;			\
-																		\
-			using OZ = typename std::remove_reference_t					\
-			<decltype( lhs_z_axis op rhs_z_axis )>::value_type;			\
-																		\
-			return														\
-			Vec<OX, OY, OZ>(											\
-				(lhs_x_axis op rhs_x_axis).data(),						\
-				(lhs_y_axis op rhs_y_axis).data(),						\
-				(lhs_z_axis op rhs_z_axis).data()						\
-			);															\
+		private: template<typename OX, typename OY, typename OZ>
+		using OxVecBase = Vec<OX, OY, OZ>::base::base_X;
+		private: template<typename OX, typename OY, typename OZ>
+		using OyVecBase = Vec<OX, OY, OZ>::base::base_Y;
+		private: template<typename OX, typename OY, typename OZ>
+		using OzVecBase = Vec<OX, OY, OZ>::base::base_Z;
+		
+		#define BINARY_OP(opname, op, rhs_spec)																			\
+		\
+		public: template<typename RX, typename RY, typename RZ>															\
+		static constexpr decltype(auto)																					\
+		opname(																											\
+			std::convertible_to<Vec const&> auto&& lhs,																	\
+			Vec<RX, RY, RZ> rhs_spec rhs																				\
+		) noexcept (																									\
+				noexcept( axis_X::opname(lhs.template get_axis<XYZ::X>(), rhs.template get_axis<XYZ::X>()) )			\
+			&&	noexcept( axis_Y::opname(lhs.template get_axis<XYZ::Y>(), rhs.template get_axis<XYZ::Y>()) )			\
+			&&	noexcept( axis_Z::opname(lhs.template get_axis<XYZ::Z>(), rhs.template get_axis<XYZ::Z>()) )			\
+		) requires requires(decltype(lhs) lhs, decltype(rhs) rhs) {														\
+			axis_X::opname(lhs.template get_axis<XYZ::X>(), rhs.template get_axis<XYZ::X>());							\
+			axis_Y::opname(lhs.template get_axis<XYZ::Y>(), rhs.template get_axis<XYZ::Y>());							\
+			axis_Z::opname(lhs.template get_axis<XYZ::Z>(), rhs.template get_axis<XYZ::Z>());							\
+		}																												\
+		{																												\
+			auto&& x_axis_out =	axis_X::opname(lhs.template get_axis<XYZ::X>(), rhs.template get_axis<XYZ::X>());		\
+			auto&& y_axis_out =	axis_Y::opname(lhs.template get_axis<XYZ::Y>(), rhs.template get_axis<XYZ::Y>());		\
+			auto&& z_axis_out =	axis_Z::opname(lhs.template get_axis<XYZ::Z>(), rhs.template get_axis<XYZ::Z>());		\
+																														\
+			using OX = typename std::remove_reference_t<decltype(x_axis_out)>::value_type;								\
+			using OY = typename std::remove_reference_t<decltype(y_axis_out)>::value_type;								\
+			using OZ = typename std::remove_reference_t<decltype(z_axis_out)>::value_type;								\
+																														\
+			return Vec<OX, OY, OZ>																						\
+			(																											\
+				static_cast<Vec<OX, OY, OZ>::base>(x_axis_out).template data<XYZ::X>(),											\
+				static_cast<Vec<OX, OY, OZ>::base>(y_axis_out).template data<XYZ::Y>(),																								\
+				static_cast<Vec<OX, OY, OZ>::base>(z_axis_out).template data<XYZ::Z>()																								\
+			);																											\
 		}
-		BINARY_OP(+, &)
-		BINARY_OP(+, &&)
-		BINARY_OP(+, const&)
-		
-		BINARY_OP(-, &)
-		BINARY_OP(-, &&)
-		BINARY_OP(-, const&)
-		
-		BINARY_OP(*, &)
-		BINARY_OP(*, &&)
-		BINARY_OP(*, const&)
-		
-		BINARY_OP(/, &)
-		BINARY_OP(/, &&)
-		BINARY_OP(/, const&)
-		
-		BINARY_OP(%, &)
-		BINARY_OP(%, &&)
-		BINARY_OP(%, const&)
-		#undef BINARY_OP
-		
-		#define UNARY_OP(op)
-		
-		
-		
-		#undef UNARY_OP
 		
 	};
 	
