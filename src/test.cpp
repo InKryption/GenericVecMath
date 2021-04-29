@@ -9,5 +9,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
 	ink::Vec<int&, int&> vref(v.x, v.y);
 	
+	auto&& b = get<2>(vref);
+	
 	return 0;
 }

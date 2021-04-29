@@ -73,8 +73,7 @@ namespace ink {
 		// It's an empty struch, therefore should be fine to decorate this with [[no_unique_address]].
 		struct Noop {
 			
-			constexpr Noop() noexcept {}
-			constexpr Noop(std::nullptr_t) noexcept {}
+			constexpr Noop(std::nullptr_t = nullptr) noexcept {}
 			
 			#define BinaryOp(op)	\
 			friend constexpr decltype(auto) operator op(Noop, auto&& rhs) noexcept { return rhs; }	\
@@ -88,7 +87,7 @@ namespace ink {
 			#undef BinaryOp
 			
 			#define UnaryOp(op)	\
-			friend constexpr decltype(auto) operator op(Noop noop) noexcept { return noop; }
+			friend constexpr decltype(auto) operator op(std::common_reference_with<Noop> auto&& noop) noexcept { return noop; }
 			UnaryOp(+)	UnaryOp(-)
 			UnaryOp(*)	UnaryOp(&)
 			UnaryOp(!)	UnaryOp(~)
@@ -111,9 +110,30 @@ namespace ink {
 			NoopCmp(>)	NoopCmp(<)
 			#undef NoopCmp
 			
-			template<typename T> constexpr decltype(auto)
-			operator=(T&& v) const noexcept
-			{ return v; }
+			#define NoopAssignOp(op)	\
+			template<typename T> constexpr decltype(auto) operator op(T&& rhs) const noexcept { return rhs; }
+			NoopAssignOp(=)
+			NoopAssignOp(+=)	NoopAssignOp(-=)
+			NoopAssignOp(*=)	NoopAssignOp(/=)	NoopAssignOp(%=)
+			NoopAssignOp(&=)	NoopAssignOp(|=)	NoopAssignOp(^=)
+			NoopAssignOp(>>=)	NoopAssignOp(<<=)
+			#undef NoopAssignOp
+			
+			constexpr decltype(auto)
+			operator++() const noexcept
+			{ return *this; }
+			
+			constexpr decltype(auto)
+			operator++(int) const noexcept
+			{ return *this; }
+			
+			constexpr decltype(auto)
+			operator--() const noexcept
+			{ return *this; }
+			
+			constexpr decltype(auto)
+			operator--(int) const noexcept
+			{ return *this; }
 			
 			template<typename... Args> constexpr decltype(auto)
 			operator()([[maybe_unused]] Args&&...) const noexcept
@@ -308,6 +328,8 @@ namespace ink {
 		void_y = std::same_as<void, Y>,
 		void_z = std::same_as<void, Z>;
 		
+		/* CONSTRUCTORS */
+		
 		public: constexpr
 		Vec() noexcept(noexcept(base()))
 		requires(std::default_initializable<base>)
@@ -353,6 +375,16 @@ namespace ink {
 		noexcept(noexcept(base(std::declval<ctr_arg<X>>(), std::declval<ctr_arg<Y>>(), z)))
 		requires( void_x && void_y && !void_z )
 		: base(ctr_arg<X>(), ctr_arg<Y>(), z) {}
+		
+		/* GET METHOD */
+		public: template<size_t i> friend constexpr auto&&
+		get(std::common_reference_with<Vec> auto&& vec) noexcept
+		{
+			if constexpr(i == 0) return vec.x;
+			if constexpr(i == 1) return vec.y;
+			if constexpr(i == 2) return vec.z;
+		}
+		
 		
 	};
 	
