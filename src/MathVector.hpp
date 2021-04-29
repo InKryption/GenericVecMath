@@ -90,6 +90,15 @@ namespace ink {
 			
 		};
 		
+		template<typename T, typename U>
+		struct CommonTemplate: std::false_type {};
+		
+		template<template<typename...> typename Template, typename... Ts, typename... Us>
+		struct CommonTemplate<Template<Ts...>, Template<Us...>>: std::true_type {};
+		
+		template<typename T, typename U>
+		static constexpr bool CommonTemplate_v = CommonTemplate<T, U>::value;
+		
 		template<typename T>
 		concept non_void = (!std::same_as<void, T>);
 		
@@ -180,11 +189,8 @@ namespace ink {
 			
 		};
 		
-		template<typename X, typename Y, typename Z>
-		struct VecBase:
-			public AxisOrdering<Axis<X, XYZ::X>, Axis<Y, XYZ::Y>, Axis<Z, XYZ::Z>>::_0,
-			public AxisOrdering<Axis<X, XYZ::X>, Axis<Y, XYZ::Y>, Axis<Z, XYZ::Z>>::_1,
-			public AxisOrdering<Axis<X, XYZ::X>, Axis<Y, XYZ::Y>, Axis<Z, XYZ::Z>>::_2
+		template<typename X, typename Y, typename Z, typename Order = AxisOrdering<Axis<X, XYZ::X>, Axis<Y, XYZ::Y>, Axis<Z, XYZ::Z>>>
+		struct VecBase: public Order::_0, public Order::_1, public Order::_2
 		{
 			
 			private:
@@ -192,18 +198,15 @@ namespace ink {
 			using baseY = Axis<Y, XYZ::Y>;
 			using baseZ = Axis<Z, XYZ::Z>;
 			
-			private:
-			using Order = AxisOrdering<baseX, baseY, baseZ>;
+			protected:
+			using ctr_x = baseX::ctr_arg;
+			using ctr_y = baseY::ctr_arg;
+			using ctr_z = baseZ::ctr_arg;
 			
 			private:
 			using base0 = typename Order::_0;
 			using base1 = typename Order::_1;
 			using base2 = typename Order::_2;
-			
-			protected:
-			using ctr_x = baseX::ctr_arg;
-			using ctr_y = baseY::ctr_arg;
-			using ctr_z = baseZ::ctr_arg;
 			
 			public: constexpr
 			VecBase() noexcept( noexcept(base0()) && noexcept(base1()) && noexcept(base2()) )
@@ -286,6 +289,8 @@ namespace ink {
 	template<typename X, typename Y = X, typename Z = void>
 	class Vec: public detail::VecBase<X, Y, Z> {
 		
+		template<typename, typename, typename> friend class Vec;
+		
 		private: using
 		base = detail::VecBase<X, Y, Z>;
 		
@@ -294,12 +299,32 @@ namespace ink {
 		using ctr_y = base::ctr_y;
 		using ctr_z = base::ctr_z;
 		
+		using type_x = decltype(base::x);
+		using type_y = decltype(base::y);
+		using type_z = decltype(base::z);
+		
 		private: static constexpr bool
 		void_x = std::same_as<void, X>,
 		void_y = std::same_as<void, Y>,
 		void_z = std::same_as<void, Z>;
 		
 		/* CONSTRUCTORS */
+		
+		public: template<typename RX, typename RY, typename RZ, typename OVec = Vec<RX, RY, RZ>>
+		explicit constexpr
+		operator Vec<RX, RY, RZ>() const
+		noexcept(	noexcept(static_cast<typename OVec::type_x>(this->x))
+		&&			noexcept(static_cast<typename OVec::type_y>(this->y))
+		&&			noexcept(static_cast<typename OVec::type_z>(this->z)))
+		requires requires(type_x fromx, type_y fromy, type_z fromz)
+		{
+			{static_cast<typename OVec::type_x>(fromx)};
+			{static_cast<typename OVec::type_y>(fromy)};
+			{static_cast<typename OVec::type_z>(fromz)};
+		}
+		{
+			return OVec( static_cast<typename OVec::type_x>(this->x), static_cast<typename OVec::type_y>(this->y), static_cast<typename OVec::type_z>(this->z) );
+		}
 		
 		public: constexpr
 		Vec() noexcept(noexcept(base()))
@@ -330,42 +355,96 @@ namespace ink {
 		
 		
 		
-		public: constexpr
-		Vec(std::common_with<ctr_x> auto&& x) noexcept(noexcept(base(x, ctr_y(), ctr_z())))
+		public: explicit constexpr /* Set to explicit to avoid implicit conversions from fundamental types to vectors with only an x axis. */
+		Vec(auto&& x) noexcept(noexcept(base(x, ctr_y(), ctr_z())))
 		requires( !void_x && (void_y || std::is_default_constructible_v<Y>) && (void_z || std::is_default_constructible_v<Z>) && std::is_constructible_v<base, decltype(x), ctr_y, ctr_z> )
 		: base(x, ctr_y(), ctr_z()) {}
 		
 		public: constexpr
-		Vec(std::common_with<ctr_y> auto&& y) noexcept(noexcept(base(ctr_x(), y, ctr_z())))
+		Vec(auto&& y) noexcept(noexcept(base(ctr_x(), y, ctr_z())))
 		requires( void_x && !void_y && void_z && std::is_constructible_v<base, ctr_z, decltype(y), ctr_z> )
 		: base(ctr_x(), y, ctr_z()) {}
 		
 		public: constexpr
-		Vec(std::common_with<ctr_z> auto&& z) noexcept(noexcept(base(ctr_x(), ctr_y(), z)))
+		Vec(auto&& z) noexcept(noexcept(base(ctr_x(), ctr_y(), z)))
 		requires( void_x && void_y && !void_z && std::is_default_constructible_v<base, ctr_x, ctr_y, decltype(z)> )
 		: base(ctr_x(), ctr_y(), z) {}
 		
 		
 		
-		template<size_t i> friend constexpr auto&&
+		/* Get method, for get<n>(Vec) syntax. */
+		
+		template<size_t i> requires(i % 3 == 0) friend constexpr auto&&
 		get(Vec& v) noexcept {
 			if constexpr(i == 0) return v.x;
 			if constexpr(i == 1) return v.y;
 			if constexpr(i == 2) return v.z;
 		}
 		
-		template<size_t i> friend constexpr auto&&
+		template<size_t i> requires(i % 3 == 0) friend constexpr auto&&
 		get(Vec&& v) noexcept {
 			if constexpr(i == 0) return v.x;
 			if constexpr(i == 1) return v.y;
 			if constexpr(i == 2) return v.z;
 		}
 		
-		template<size_t i> friend constexpr auto&&
+		template<size_t i> requires(i % 3 == 0) friend constexpr auto&&
 		get(Vec const& v) noexcept {
 			if constexpr(i == 0) return v.x;
 			if constexpr(i == 1) return v.y;
 			if constexpr(i == 2) return v.z;
+		}
+		
+		
+		
+		private: template<typename Lhs, typename Rhs>
+		static constexpr bool ConstrainToVecTypes
+		=	std::is_same_v<Vec, std::remove_cvref_t<Lhs>>
+		&&	detail::CommonTemplate_v<Vec, std::remove_cvref_t<Rhs>>;
+		
+		public: template<typename T, typename U>
+		requires(ConstrainToVecTypes<T, U>)
+		friend constexpr decltype(auto)
+		operator+(T&& lhs, U&& rhs) noexcept( noexcept(lhs.x + rhs.x) && noexcept(lhs.y + rhs.y) && noexcept(lhs.z + rhs.z) )
+		requires requires(T&& lhs, U&& rhs) { {lhs.x + rhs.x}; {lhs.y + rhs.y}; {lhs.z + rhs.z}; }
+		{
+			return make_vec(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z);
+		}
+		
+		public: template<typename T, typename U>
+		requires(ConstrainToVecTypes<T, U>)
+		friend constexpr decltype(auto)
+		operator-(T&& lhs, U&& rhs) noexcept( noexcept(lhs.x - rhs.x) && noexcept(lhs.y - rhs.y) && noexcept(lhs.z - rhs.z) )
+		requires requires(T&& lhs, U&& rhs) { {lhs.x - rhs.x}; {lhs.y - rhs.y}; {lhs.z - rhs.z}; }
+		{
+			return make_vec(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z);
+		}
+		
+		public: template<typename T, typename U>
+		requires(ConstrainToVecTypes<T, U>)
+		friend constexpr decltype(auto)
+		operator*(T&& lhs, U&& rhs) noexcept( noexcept(lhs.x * rhs.x) && noexcept(lhs.y * rhs.y) && noexcept(lhs.z * rhs.z) )
+		requires requires(T&& lhs, U&& rhs) { {lhs.x * rhs.x}; {lhs.y * rhs.y}; {lhs.z * rhs.z}; }
+		{
+			return make_vec(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z);
+		}
+		
+		public: template<typename T, typename U>
+		requires(ConstrainToVecTypes<T, U>)
+		friend constexpr decltype(auto)
+		operator/(T&& lhs, U&& rhs) noexcept( noexcept(lhs.x / rhs.x) && noexcept(lhs.y / rhs.y) && noexcept(lhs.z / rhs.z) )
+		requires requires(T&& lhs, U&& rhs) { {lhs.x / rhs.x}; {lhs.y / rhs.y}; {lhs.z / rhs.z}; }
+		{
+			return make_vec(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z);
+		}
+		
+		public: template<typename T, typename U>
+		requires(ConstrainToVecTypes<T, U>)
+		friend constexpr decltype(auto)
+		operator%(T&& lhs, U&& rhs) noexcept( noexcept(lhs.x % rhs.x) && noexcept(lhs.y % rhs.y) && noexcept(lhs.z % rhs.z) )
+		requires requires(T&& lhs, U&& rhs) { {lhs.x % rhs.x}; {lhs.y % rhs.y}; {lhs.z % rhs.z}; }
+		{
+			return make_vec(lhs.x % rhs.x, lhs.y % rhs.y, lhs.z % rhs.z);
 		}
 		
 	};
@@ -389,11 +468,6 @@ namespace ink {
 	
 	template<class X> Vec(X, std::nullptr_t)					-> Vec<X, void, void>;
 	template<class Y> Vec(std::nullptr_t, Y)					-> Vec<void, Y, void>;
-	
-	void test() {
-		constexpr auto v = Vec(1, nullptr, 3LL);
-		constexpr auto b = get<0>(v) - 2;
-	}
 	
 }
 
