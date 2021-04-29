@@ -29,8 +29,8 @@ namespace ink {
 			template<typename T> explicit constexpr operator T() const noexcept(noexcept(T())) { return T(); }
 			
 			#define BinaryOp(op)	\
-			friend constexpr decltype(auto) operator op(Noop, auto&& rhs) noexcept { return rhs; }	\
-			friend constexpr decltype(auto) operator op(auto&& lhs, Noop) noexcept { return lhs; }	\
+			friend constexpr auto&& operator op(Noop, auto&& rhs) noexcept { return rhs; }	\
+			friend constexpr auto&& operator op(auto&& lhs, Noop) noexcept { return lhs; }	\
 			friend constexpr decltype(auto) operator op(Noop, Noop) noexcept { return Noop(); }
 			BinaryOp(+)	BinaryOp(-)
 			BinaryOp(*)	BinaryOp(/)	BinaryOp(%)
@@ -307,43 +307,66 @@ namespace ink {
 		: base() {}
 		
 		public: constexpr
-		Vec(std::common_with<ctr_x> auto&& x, std::common_with<ctr_y> auto&& y, std::common_with<ctr_z> auto&& z)
-		noexcept(noexcept(base(x, y, z)))
+		Vec(auto&& x, auto&& y, auto&& z) noexcept(noexcept(base(x, y, z)))
+		requires(std::is_constructible_v<base, decltype(x), decltype(y), decltype(z)>)
 		: base(x, y, z) {}
 		
 		
 		
 		public: constexpr
-		Vec(std::common_with<ctr_x> auto&& x, std::common_with<ctr_y> auto&& y) noexcept(noexcept(base(x, y, ctr_z())))
-		requires( !void_x && !void_y && (void_z || std::is_default_constructible_v<Z>) )
+		Vec(auto&& x, auto&& y) noexcept(noexcept(base(x, y, ctr_z())))
+		requires( !void_x && !void_y && (void_z || std::is_default_constructible_v<Z>) && std::is_constructible_v<base, decltype(x), decltype(y), ctr_z> )
 		: base(x, y, ctr_z()) {}
 		
 		public: constexpr
-		Vec(std::common_with<ctr_x> auto&& x, std::common_with<ctr_z> auto&& z) noexcept(noexcept(base(x, ctr_y(), z)))
-		requires( !void_x && void_y && !void_z )
+		Vec(auto&& x, auto&& z) noexcept(noexcept(base(x, ctr_y(), z)))
+		requires( !void_x && void_y && !void_z && std::is_default_constructible_v<base, decltype(x), ctr_y, decltype(z)> )
 		: base(x, ctr_y(), z) {}
 		
 		public: constexpr
-		Vec(std::common_with<ctr_y> auto&& y, std::common_with<ctr_z> auto&& z) noexcept(noexcept(base(ctr_x(), y, z)))
-		requires( void_x && !void_y && !void_z )
+		Vec(auto&& y, auto&& z) noexcept(noexcept(base(ctr_x(), y, z)))
+		requires( void_x && !void_y && !void_z && std::is_default_constructible_v<base, ctr_x, decltype(y), decltype(z)> )
 		: base(ctr_x(), y, z) {}
 		
 		
 		
 		public: constexpr
 		Vec(std::common_with<ctr_x> auto&& x) noexcept(noexcept(base(x, ctr_y(), ctr_z())))
-		requires( !void_x && (void_y || std::is_default_constructible_v<Y>) && (void_z || std::is_default_constructible_v<Z>) )
+		requires( !void_x && (void_y || std::is_default_constructible_v<Y>) && (void_z || std::is_default_constructible_v<Z>) && std::is_constructible_v<base, decltype(x), ctr_y, ctr_z> )
 		: base(x, ctr_y(), ctr_z()) {}
 		
 		public: constexpr
 		Vec(std::common_with<ctr_y> auto&& y) noexcept(noexcept(base(ctr_x(), y, ctr_z())))
-		requires( void_x && !void_y && void_z )
+		requires( void_x && !void_y && void_z && std::is_constructible_v<base, ctr_z, decltype(y), ctr_z> )
 		: base(ctr_x(), y, ctr_z()) {}
 		
 		public: constexpr
 		Vec(std::common_with<ctr_z> auto&& z) noexcept(noexcept(base(ctr_x(), ctr_y(), z)))
-		requires( void_x && void_y && !void_z )
+		requires( void_x && void_y && !void_z && std::is_default_constructible_v<base, ctr_x, ctr_y, decltype(z)> )
 		: base(ctr_x(), ctr_y(), z) {}
+		
+		
+		
+		template<size_t i> friend constexpr auto&&
+		get(Vec& v) noexcept {
+			if constexpr(i == 0) return v.x;
+			if constexpr(i == 1) return v.y;
+			if constexpr(i == 2) return v.z;
+		}
+		
+		template<size_t i> friend constexpr auto&&
+		get(Vec&& v) noexcept {
+			if constexpr(i == 0) return v.x;
+			if constexpr(i == 1) return v.y;
+			if constexpr(i == 2) return v.z;
+		}
+		
+		template<size_t i> friend constexpr auto&&
+		get(Vec const& v) noexcept {
+			if constexpr(i == 0) return v.x;
+			if constexpr(i == 1) return v.y;
+			if constexpr(i == 2) return v.z;
+		}
 		
 	};
 	
@@ -366,6 +389,11 @@ namespace ink {
 	
 	template<class X> Vec(X, std::nullptr_t)					-> Vec<X, void, void>;
 	template<class Y> Vec(std::nullptr_t, Y)					-> Vec<void, Y, void>;
+	
+	void test() {
+		constexpr auto v = Vec(1, nullptr, 3LL);
+		constexpr auto b = get<0>(v) - 2;
+	}
 	
 }
 
