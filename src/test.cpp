@@ -5,7 +5,9 @@
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
+	auto v = ink::Vec(3, 3);
 	
+	ink::Vec<int&, int&> vref(v.x, v.y);
 	
 	return 0;
 }

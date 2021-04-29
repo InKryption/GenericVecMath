@@ -314,58 +314,67 @@ namespace ink {
 		: base() {}
 		
 		public: constexpr
-		Vec(std::common_with<ctr_arg<X>> auto&& x, std::common_with<ctr_arg<Y>> auto&& y, std::common_with<ctr_arg<Z>> auto&& z)
+		Vec(std::common_reference_with<ctr_arg<X>> auto&& x, std::common_reference_with<ctr_arg<Y>> auto&& y, std::common_reference_with<ctr_arg<Z>> auto&& z)
 		noexcept(noexcept(base(x, y, z)))
 		: base(x, y, z) {}
 		
 		public: constexpr
-		Vec(std::common_with<ctr_arg<X>> auto&& x, std::common_with<ctr_arg<Y>> auto&& y)
+		Vec(std::common_reference_with<ctr_arg<X>> auto&& x, std::common_reference_with<ctr_arg<Y>> auto&& y)
 		noexcept(noexcept(base(x, y, std::declval<ctr_arg<Z>>())))
 		requires( (void_z || std::default_initializable<ctr_arg<Z>>) )
 		: base(x, y, ctr_arg<Z>()) {}
 		
 		public: constexpr
-		Vec(std::common_with<ctr_arg<X>> auto&& x)
+		Vec(std::common_reference_with<ctr_arg<X>> auto&& x)
 		noexcept(noexcept(base(x, std::declval<ctr_arg<Y>>(), std::declval<ctr_arg<Z>>())))
 		requires( (void_y || std::default_initializable<ctr_arg<Y>>) && (void_z || std::default_initializable<ctr_arg<Z>>))
 		: base(x, ctr_arg<Y>(), ctr_arg<Z>()) {}
 		
 		public: constexpr
-		Vec(std::common_with<ctr_arg<X>> auto&& x, std::common_with<ctr_arg<Z>> auto&& z)
+		Vec(std::common_reference_with<ctr_arg<X>> auto&& x, std::common_reference_with<ctr_arg<Z>> auto&& z)
 		noexcept(noexcept(base(x, std::declval<ctr_arg<Y>>(), z)))
-		requires( void_y )
+		requires( !void_x && void_y && !void_z )
 		: base(x, ctr_arg<Y>(), z) {}
 		
 		public: constexpr
-		Vec(std::common_with<ctr_arg<Y>> auto&& y, std::common_with<ctr_arg<Z>> auto&& z)
+		Vec(std::common_reference_with<ctr_arg<Y>> auto&& y, std::common_reference_with<ctr_arg<Z>> auto&& z)
 		noexcept(noexcept(base(std::declval<ctr_arg<X>>(), y, z)))
-		requires( void_x )
+		requires( void_x && !void_y && !void_z )
 		: base(ctr_arg<X>(), y, z) {}
 		
 		public: constexpr
-		Vec(std::common_with<ctr_arg<Y>> auto&& y)
+		Vec(std::common_reference_with<ctr_arg<Y>> auto&& y)
 		noexcept(noexcept(base(std::declval<ctr_arg<X>>(), y, std::declval<ctr_arg<Z>>())))
-		requires( void_x && void_z )
+		requires( void_x && !void_y && void_z )
 		: base(ctr_arg<X>(), y, ctr_arg<Z>()) {}
 		
 		public: constexpr
-		Vec(std::common_with<ctr_arg<Z>> auto&& z)
+		Vec(std::common_reference_with<ctr_arg<Z>> auto&& z)
 		noexcept(noexcept(base(std::declval<ctr_arg<X>>(), std::declval<ctr_arg<Y>>(), z)))
-		requires( void_x && void_y )
+		requires( void_x && void_y && !void_z )
 		: base(ctr_arg<X>(), ctr_arg<Y>(), z) {}
 		
 	};
 	
-	Vec(std::nullptr_t, std::nullptr_t, std::nullptr_t) -> Vec<void, void, void>;
-	template<typename X, typename Y, typename Z> Vec(X, Y, Z) -> Vec<X, Y, Z>;
+	template<class X, class Y, class Z> Vec(X, Y, Z)			-> Vec<X, Y, Z>;
 	
-	template<typename X, typename Y> Vec(X, Y, std::nullptr_t) -> Vec<X, Y, void>;
-	template<typename X, typename Z> Vec(X, std::nullptr_t, Z) -> Vec<X, void, Z>;
-	template<typename Y, typename Z> Vec(std::nullptr_t, Y, Z) -> Vec<void, Y, Z>;
+	template<class X> Vec(X, std::nullptr_t, std::nullptr_t)	-> Vec<X, void, void>;
+	template<class Y> Vec(std::nullptr_t, Y, std::nullptr_t)	-> Vec<void, Y, void>;
+	template<class Z> Vec(std::nullptr_t, std::nullptr_t, Z)	-> Vec<void, void, Z>;
 	
-	template<typename X> Vec(X, std::nullptr_t, std::nullptr_t) -> Vec<X, void, void>;
-	template<typename Y> Vec(std::nullptr_t, Y, std::nullptr_t) -> Vec<void, Y, void>;
-	template<typename Z> Vec(std::nullptr_t, std::nullptr_t, Z) -> Vec<void, void, Z>;
+	template<class X, class Y>	Vec(X, Y, std::nullptr_t)		-> Vec<X, Y, void>;
+	template<class X, class Z>	Vec(X, std::nullptr_t, Z)		-> Vec<X, void, Z>;
+	template<class Y, class Z>	Vec(std::nullptr_t, Y, Z)		-> Vec<void, Y, Z>;
+	
+	Vec(std::nullptr_t, std::nullptr_t, std::nullptr_t)			-> Vec<void, void, void>;
+	Vec(std::nullptr_t, std::nullptr_t)							-> Vec<void, void, void>;
+	Vec(std::nullptr_t)											-> Vec<void, void, void>;
+	
+	template<class X>			Vec(X)							-> Vec<X, void, void>;
+	template<class X, class Y>	Vec(X, Y)						-> Vec<X, Y>;
+	
+	template<class X> Vec(X, std::nullptr_t)					-> Vec<X, void, void>;
+	template<class Y> Vec(std::nullptr_t, Y)					-> Vec<void, Y, void>;
 	
 }
 
