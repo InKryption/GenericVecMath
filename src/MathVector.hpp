@@ -73,6 +73,9 @@ namespace ink {
 		// It's an empty struch, therefore should be fine to decorate this with [[no_unique_address]].
 		struct Noop {
 			
+			template<typename T>
+			using void_if_noop = std::conditional_t<(std::same_as<T, detail::Noop>), void, T>;
+			
 			constexpr Noop(std::nullptr_t = nullptr) noexcept {}
 			
 			#define BinaryOp(op)	\
@@ -142,6 +145,9 @@ namespace ink {
 			template<typename T> constexpr decltype(auto)
 			operator[]([[maybe_unused]] T&&) const noexcept
 			{ return *this; }
+			
+			constexpr operator std::nullptr_t() const noexcept
+			{ return nullptr; }
 			
 		};
 		
@@ -313,15 +319,32 @@ namespace ink {
 		using VecBasePacked = internal::AlignTypes_t<Axis<X, XYZ::X>, Axis<Y, XYZ::Y>, Axis<Z, XYZ::Z>>::template rebind<VecBase>;
 		
 	}
-
+	
+	template<typename X, typename Y, typename Z>
+	static constexpr decltype(auto)
+	make_vec(X&& x, Y&& y, Z&& z) noexcept
+	{
+		
+		return Vec(
+			[&]()constexpr noexcept { if constexpr(std::same_as<std::decay_t<X>, detail::Noop>) { return nullptr; } else { return std::forward<X>(x); } }(),
+			[&]()constexpr noexcept { if constexpr(std::same_as<std::decay_t<Y>, detail::Noop>) { return nullptr; } else { return std::forward<Y>(y); } }(),
+			[&]()constexpr noexcept { if constexpr(std::same_as<std::decay_t<Z>, detail::Noop>) { return nullptr; } else { return std::forward<Z>(z); } }()
+		);
+	}
+	
 	template<typename X, typename Y = X, typename Z = void>
 	class Vec: public detail::VecBasePacked<X, Y, Z> {
 		
 		private: using
 		base = detail::VecBasePacked<X, Y, Z>;
 		
-		private: template<typename T> using
-		ctr_arg = typename base::ctr_arg<T>;
+		private: template<typename T>
+		using void_if_noop = typename detail::Noop::void_if_noop<T>;
+		
+		private:
+		using ctr_x = typename base::ctr_arg<X>;
+		using ctr_y = typename base::ctr_arg<Y>;
+		using ctr_z = typename base::ctr_arg<Z>;
 		
 		private: static constexpr bool
 		void_x = std::same_as<void, X>,
@@ -336,47 +359,49 @@ namespace ink {
 		: base() {}
 		
 		public: constexpr
-		Vec(std::common_reference_with<ctr_arg<X>> auto&& x, std::common_reference_with<ctr_arg<Y>> auto&& y, std::common_reference_with<ctr_arg<Z>> auto&& z)
+		Vec(std::common_reference_with<ctr_x> auto&& x, std::common_reference_with<ctr_y> auto&& y, std::common_reference_with<ctr_z> auto&& z)
 		noexcept(noexcept(base(x, y, z)))
 		: base(x, y, z) {}
 		
 		public: constexpr
-		Vec(std::common_reference_with<ctr_arg<X>> auto&& x, std::common_reference_with<ctr_arg<Y>> auto&& y)
-		noexcept(noexcept(base(x, y, std::declval<ctr_arg<Z>>())))
-		requires( (void_z || std::default_initializable<ctr_arg<Z>>) )
-		: base(x, y, ctr_arg<Z>()) {}
+		Vec(std::common_reference_with<ctr_x> auto&& x, std::common_reference_with<ctr_y> auto&& y)
+		noexcept(noexcept(base(x, y, std::declval<ctr_z>())))
+		requires( (void_z || std::default_initializable<ctr_z>) )
+		: base(x, y, ctr_z()) {}
 		
 		public: constexpr
-		Vec(std::common_reference_with<ctr_arg<X>> auto&& x)
-		noexcept(noexcept(base(x, std::declval<ctr_arg<Y>>(), std::declval<ctr_arg<Z>>())))
-		requires( (void_y || std::default_initializable<ctr_arg<Y>>) && (void_z || std::default_initializable<ctr_arg<Z>>))
-		: base(x, ctr_arg<Y>(), ctr_arg<Z>()) {}
+		Vec(std::common_reference_with<ctr_x> auto&& x)
+		noexcept(noexcept(base(x, std::declval<ctr_y>(), std::declval<ctr_z>())))
+		requires( (void_y || std::default_initializable<ctr_y>) && (void_z || std::default_initializable<ctr_z>))
+		: base(x, ctr_y(), ctr_z()) {}
 		
 		public: constexpr
-		Vec(std::common_reference_with<ctr_arg<X>> auto&& x, std::common_reference_with<ctr_arg<Z>> auto&& z)
-		noexcept(noexcept(base(x, std::declval<ctr_arg<Y>>(), z)))
+		Vec(std::common_reference_with<ctr_x> auto&& x, std::common_reference_with<ctr_z> auto&& z)
+		noexcept(noexcept(base(x, std::declval<ctr_y>(), z)))
 		requires( !void_x && void_y && !void_z )
-		: base(x, ctr_arg<Y>(), z) {}
+		: base(x, ctr_y(), z) {}
 		
 		public: constexpr
-		Vec(std::common_reference_with<ctr_arg<Y>> auto&& y, std::common_reference_with<ctr_arg<Z>> auto&& z)
-		noexcept(noexcept(base(std::declval<ctr_arg<X>>(), y, z)))
+		Vec(std::common_reference_with<ctr_y> auto&& y, std::common_reference_with<ctr_z> auto&& z)
+		noexcept(noexcept(base(std::declval<ctr_x>(), y, z)))
 		requires( void_x && !void_y && !void_z )
-		: base(ctr_arg<X>(), y, z) {}
+		: base(ctr_x(), y, z) {}
 		
 		public: constexpr
-		Vec(std::common_reference_with<ctr_arg<Y>> auto&& y)
-		noexcept(noexcept(base(std::declval<ctr_arg<X>>(), y, std::declval<ctr_arg<Z>>())))
+		Vec(std::common_reference_with<ctr_y> auto&& y)
+		noexcept(noexcept(base(std::declval<ctr_x>(), y, std::declval<ctr_z>())))
 		requires( void_x && !void_y && void_z )
-		: base(ctr_arg<X>(), y, ctr_arg<Z>()) {}
+		: base(ctr_x(), y, ctr_z()) {}
 		
 		public: constexpr
-		Vec(std::common_reference_with<ctr_arg<Z>> auto&& z)
-		noexcept(noexcept(base(std::declval<ctr_arg<X>>(), std::declval<ctr_arg<Y>>(), z)))
+		Vec(std::common_reference_with<ctr_z> auto&& z)
+		noexcept(noexcept(base(std::declval<ctr_x>(), std::declval<ctr_y>(), z)))
 		requires( void_x && void_y && !void_z )
-		: base(ctr_arg<X>(), ctr_arg<Y>(), z) {}
+		: base(ctr_x(), ctr_y(), z) {}
 		
-		/* GET METHOD */
+		
+		
+		/* GET FUNCTION */
 		public: template<size_t i> friend constexpr auto&&
 		get(std::common_reference_with<Vec> auto&& vec) noexcept
 		{
@@ -385,6 +410,29 @@ namespace ink {
 			if constexpr(i == 2) return vec.z;
 		}
 		
+		
+		
+		/* OPERATORS */
+		#define BINARY_OPERATOR(op, lhs_spec, rhs_spec)	\
+		public: template<typename RX, typename RY, typename RZ>	\
+		friend constexpr decltype(auto)	\
+		operator op (Vec lhs_spec lhs, Vec<RX, RY, RZ> rhs_spec rhs)	\
+		noexcept(noexcept(lhs.x op rhs.x) && noexcept(lhs.y op rhs.y) && noexcept(lhs.z op rhs.z))	\
+		requires requires(Vec lhs_spec lhs, Vec<RX, RY, RZ> rhs_spec rhs)	\
+		{ {lhs.x op rhs.x}; {lhs.y op rhs.y}; {lhs.z op rhs.z}; }	\
+		{ return make_vec(lhs.x op rhs.x, lhs.y op rhs.y, lhs.z op rhs.z); }
+		
+		BINARY_OPERATOR(+,	&,		&		)
+		BINARY_OPERATOR(+,	&,		&&		)
+		BINARY_OPERATOR(+,	&,		const&	)
+		
+		BINARY_OPERATOR(+,	&&,		&		)
+		BINARY_OPERATOR(+,	&&,		&&		)
+		BINARY_OPERATOR(+,	&&,		const&	)
+		
+		BINARY_OPERATOR(+,	const&,	&		)
+		BINARY_OPERATOR(+,	const&,	&&		)
+		BINARY_OPERATOR(+,	const&,	const&	)
 		
 	};
 	
