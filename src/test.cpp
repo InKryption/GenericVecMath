@@ -8,12 +8,10 @@
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
-	constexpr ink::Vec v1(1, 4, 14);
-	constexpr ink::Vec v2(3, 7, 2.5);
+	constexpr ink::Vec v1(3, 2, (int)'a');
+	constexpr ink::Vec<int, int, int> v2(v1);
 	
-	constexpr auto b = v1 * v2;
-	
-	constexpr auto res = b.z;
+	printf("%i, %i, %c\n", v2.x, v2.y, v2.z);
 	
 	return 0;
 }
