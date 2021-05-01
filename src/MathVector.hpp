@@ -121,7 +121,6 @@ namespace ink {
 		
 		template<typename T, XYZ tag> struct Axis;
 		
-		
 		#define SpecializeAxis(XYZ_tag, member_name)			\
 																\
 		template<non_void T> struct Axis<T, XYZ_tag> {			\
