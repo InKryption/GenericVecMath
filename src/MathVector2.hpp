@@ -49,7 +49,7 @@ namespace ink {
 	 * (+) <Convertible to 'To const&' - this includes all of the former>
 	 */
 	template<typename From, typename To>
-	concept temp_reference_to = std::convertible_to<From, To const&>;
+	concept temp_reference_to = (std::is_reference_v<From> && std::same_as<std::remove_cvref_t<From>, To>) || std::convertible_to<From, To>;
 	
 	template<typename From, typename To, typename OrDefault = std::nullptr_t>
 	concept tmp_ref_or_default = temp_reference_to<From, To> || std::same_as<From, OrDefault>;

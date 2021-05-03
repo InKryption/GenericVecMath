@@ -19,7 +19,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	int n{};
 	int& s{n};
 	char c = 'a';
-	ink::Vec<int, char, void> SVec(n, c, nullptr);
+	ink::Vec<int&, char&, void> SVec(n, c, nullptr);
 	
 	
 	
