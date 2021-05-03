@@ -11,7 +11,8 @@ struct Signal {
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
-	
+	constexpr
+	ink::Vec<int, void, size_t> f(1, nullptr, 2);
 	
 	return 0;
 }
