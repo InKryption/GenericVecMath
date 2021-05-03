@@ -4,6 +4,9 @@
 #include <cstdlib>
 #include <utility>
 #include <type_traits>
+#include <concepts>
+
+
 
 namespace ink {
 	
@@ -25,9 +28,17 @@ namespace ink {
 	}
 	
 	using detail::SameTemplate;
-	template<typename From, typename To>
-	concept reference_to = std::convertible_to<From, To const&>;
 	
+	/**
+	 * Any type which is any of:
+	 * (+) To const&
+	 * (+) To &&
+	 * (+) To &
+	 * (+) To
+	 * (+) <Convertible to 'To const&' - this includes all of the former>
+	 */
+	template<typename From, typename To>
+	concept temp_reference_to = std::convertible_to<From, To const&>;
 	
 	/**
 	 * This is a utility construct; it can be operated on with anything, but always produce a noop,
@@ -62,7 +73,7 @@ namespace ink {
 			BinaryOp(&&)	BinaryOp(||)	BinaryOp(<=>)
 		#undef BinaryOp
 		
-		#define UnaryOp(op)	friend constexpr decltype(auto) operator op(reference_to<Noop> auto&& noop) noexcept { return noop; }
+		#define UnaryOp(op)	friend constexpr decltype(auto) operator op(temp_reference_to<Noop> auto&& noop) noexcept { return noop; }
 			UnaryOp(+)		UnaryOp(-)
 			UnaryOp(!)		UnaryOp(~)
 			UnaryOp(*)		UnaryOp(&)
@@ -97,32 +108,56 @@ namespace ink {
 		template<typename T, XYZ tag> struct Axis;
 		
 		
-		template<> struct Axis<void, XYZ::X> { constexpr Axis(std::nullptr_t = nullptr) noexcept {} protected: static constexpr Noop x{}; };
-		template<> struct Axis<void, XYZ::Y> { constexpr Axis(std::nullptr_t = nullptr) noexcept {} protected: static constexpr Noop y{}; };
-		template<> struct Axis<void, XYZ::Z> { constexpr Axis(std::nullptr_t = nullptr) noexcept {} protected: static constexpr Noop z{}; };
+		
+		template<> struct Axis<void, XYZ::X> {
+			constexpr Axis(std::nullptr_t = nullptr) noexcept {}
+			protected: static constexpr Noop x{};
+		};
+		
+		template<> struct Axis<void, XYZ::Y> {
+			constexpr Axis(std::nullptr_t = nullptr) noexcept {}
+			protected: static constexpr Noop y{};
+		};
+		
+		template<> struct Axis<void, XYZ::Z> {
+			constexpr Axis(std::nullptr_t = nullptr) noexcept {}
+			protected: static constexpr Noop z{};
+		};
 		
 		
 		
-		template<typename T> requires(!std::is_same_v<void, T>)
+		template<typename T> requires(!std::same_as<void, T>)
 		struct Axis<T, XYZ::X> {
-			constexpr Axis() requires(std::default_initializable<T>) {
-			constexpr Axis(reference_to<T> auto&& x): x(x) {}
+			constexpr Axis(std::nullptr_t = nullptr) requires(std::default_initializable<T>): x() {}
+			constexpr Axis(auto&& x): x(x) {}
 			T x;
 		};
 		
-		template<typename T> requires(!std::is_same_v<void, T>)
+		template<typename T> requires(!std::same_as<void, T>)
 		struct Axis<T, XYZ::Y> {
-			constexpr Axis() requires(std::default_initializable<T>) {}
-			constexpr Axis(reference_to<T> auto&& y): y(y) {}
+			constexpr Axis(std::nullptr_t = nullptr) requires(std::default_initializable<T>): y() {}
+			constexpr Axis(auto&& y): y(y) {}
 			T y;
 		};
 		
-		template<typename T> requires(!std::is_same_v<void, T>)
+		template<typename T> requires(!std::same_as<void, T>)
 		struct Axis<T, XYZ::Z> {
-			constexpr Axis() requires(std::default_initializable<T>) {}
-			constexpr Axis(reference_to<T> auto&& z): z(z) {}
+			constexpr Axis(std::nullptr_t = nullptr) requires(std::default_initializable<T>): z() {}
+			constexpr Axis(auto&& z): z(z) {}
 			T z;
 		};
+		
+		
+		template<typename T, auto Else = sizeof(char)> struct SizeofWVoid_t:
+		std::integral_constant<decltype(sizeof(T)), sizeof(T)> {};
+		
+		template<auto Else> struct SizeofWVoid_t<void, Else>:
+		std::integral_constant<decltype(Else), Else> {};
+		
+		template<typename T, auto Else = sizeof(char)>
+		static constexpr auto SizeofWVoid = SizeofWVoid_t<T, Else>::value;
+		
+		
 		
 		template<typename X, typename Y, typename Z>
 		struct AxisGroupMetaInfo {
@@ -141,9 +176,9 @@ namespace ink {
 			
 			public: template<Tag tag>
 			static constexpr size_t IndexOfAxis =
-			(tag == Tag::X) ? (2 - char(alignof(real_type<Tag::X>) >= alignof(real_type<Tag::Y>)) - char(alignof(real_type<Tag::X>) >= alignof(real_type<Tag::Z>))) :
-			(tag == Tag::Y) ? (2 - char(alignof(real_type<Tag::X>) <  alignof(real_type<Tag::Y>)) - char(alignof(real_type<Tag::Y>) >= alignof(real_type<Tag::Z>))) :
-			(tag == Tag::Z) ? (2 - char(alignof(real_type<Tag::X>) <  alignof(real_type<Tag::Z>)) - char(alignof(real_type<Tag::Y>) <  alignof(real_type<Tag::Z>))) : -1;
+			(tag == Tag::X) ? (2 - char((SizeofWVoid<real_type<Tag::X>>) >= (SizeofWVoid<real_type<Tag::Y>>)) - char((SizeofWVoid<real_type<Tag::X>>) >= (SizeofWVoid<real_type<Tag::Z>>))) :
+			(tag == Tag::Y) ? (2 - char((SizeofWVoid<real_type<Tag::X>>) <  (SizeofWVoid<real_type<Tag::Y>>)) - char((SizeofWVoid<real_type<Tag::Y>>) >= (SizeofWVoid<real_type<Tag::Z>>))) :
+			(tag == Tag::Z) ? (2 - char((SizeofWVoid<real_type<Tag::X>>) <  (SizeofWVoid<real_type<Tag::Z>>)) - char((SizeofWVoid<real_type<Tag::Y>>) <  (SizeofWVoid<real_type<Tag::Z>>))) : -1;
 			
 			public: template<size_t i>
 			static constexpr Tag AxisAtIndex =
@@ -154,10 +189,6 @@ namespace ink {
 			public: template<size_t i>
 			using AxisAt = GetAxis< AxisAtIndex<i> >;
 			
-			public: template<Tag tag0, Tag tag1, Tag tag2>
-			static constexpr bool REQUIRE_ORDER =
-			(IndexOfAxis<tag0> == 0) && (IndexOfAxis<tag1> == 1) && (IndexOfAxis<tag2> == 2);
-			
 		};
 		
 		template<typename X, typename Y, typename Z, typename MetaInfo = AxisGroupMetaInfo<X, Y, Z>>
@@ -167,67 +198,86 @@ namespace ink {
 			public MetaInfo::AxisAt<2>
 		{
 			
-			protected:	using Meta = MetaInfo;
+			protected:	using meta = MetaInfo;
 			
-			private:	using Tag = typename Meta::Tag;
+			protected:	using baseX = typename meta::GetAxis<XYZ::X>;
+			protected:	using baseY = typename meta::GetAxis<XYZ::Y>;
+			protected:	using baseZ = typename meta::GetAxis<XYZ::Z>;
 			
-			protected:	using baseX = typename Meta::GetAxis<XYZ::X>;
-			protected:	using baseY = typename Meta::GetAxis<XYZ::Y>;
-			protected:	using baseZ = typename Meta::GetAxis<XYZ::Z>;
-			
-			protected:	using ctrX = typename Meta::value_type<XYZ::X>;
-			protected:	using ctrY = typename Meta::value_type<XYZ::Y>;
-			protected:	using ctrZ = typename Meta::value_type<XYZ::Z>;
-			
-			private:	using base0 = typename Meta::AxisAt<0>;
-			private:	using base1 = typename Meta::AxisAt<1>;
-			private:	using base2 = typename Meta::AxisAt<2>;
+			private:	using base0 = typename meta::AxisAt<0>;
+			private:	using base1 = typename meta::AxisAt<1>;
+			private:	using base2 = typename meta::AxisAt<2>;
 			
 			public: constexpr
 			VecBase()
-			noexcept(noexcept(base0(), base1(), base2()))
+			noexcept(noexcept( baseX(), baseY(), baseZ() ))
 			requires(std::default_initializable<base0> && std::default_initializable<base1> && std::default_initializable<base2>)
 			: base0(), base1(), base2() {}
 			
 			public: constexpr
-			VecBase(reference_to<ctrX> auto&& x, reference_to<ctrY> auto&& y, reference_to<ctrZ> auto&& z)
-			noexcept(noexcept(base0(x), base1(y), base2(z)))
-			requires(Meta::template REQUIRE_ORDER<Tag::X, Tag::Y, Tag::Z>)
-			: base0(x), base1(y), base2(z) {}
-			
-			public: constexpr
-			VecBase(reference_to<ctrX> auto&& x, reference_to<ctrY> auto&& y, reference_to<ctrZ> auto&& z)
-			noexcept(noexcept(base0(x), base1(z), base2(y)))
-			requires(Meta::template REQUIRE_ORDER<Tag::X, Tag::Z, Tag::Y>)
-			: base0(x), base1(z), base2(y) {}
-			
-			public: constexpr
-			VecBase(reference_to<ctrX> auto&& x, reference_to<ctrY> auto&& y, reference_to<ctrZ> auto&& z)
-			noexcept(noexcept(base0(y), base1(x), base2(z)))
-			requires(Meta::template REQUIRE_ORDER<Tag::Y, Tag::X, Tag::Z>)
-			: base0(y), base1(x), base2(z) {}
-			
-			public: constexpr
-			VecBase(reference_to<ctrX> auto&& x, reference_to<ctrY> auto&& y, reference_to<ctrZ> auto&& z)
-			noexcept(noexcept(base0(y), base1(z), base2(x)))
-			requires(Meta::template REQUIRE_ORDER<Tag::Y, Tag::Z, Tag::X>)
-			: base0(y), base1(z), base2(x) {}
-			
-			public: constexpr
-			VecBase(reference_to<ctrX> auto&& x, reference_to<ctrY> auto&& y, reference_to<ctrZ> auto&& z)
-			noexcept(noexcept(base0(z), base1(x), base2(y)))
-			requires(Meta::template REQUIRE_ORDER<Tag::Z, Tag::X, Tag::Y>)
-			: base0(z), base1(x), base2(y) {}
-			
-			public: constexpr
-			VecBase(reference_to<ctrX> auto&& x, reference_to<ctrY> auto&& y, reference_to<ctrZ> auto&& z)
-			noexcept(noexcept(base0(z), base1(y), base2(x)))
-			requires(Meta::template REQUIRE_ORDER<Tag::Z, Tag::Y, Tag::X>)
-			: base0(z), base1(y), base2(x) {}
+			VecBase(auto&& x, auto&& y, auto&& z)
+			noexcept(noexcept( baseX(x), baseY(y), baseZ(z) ))
+			:	base0( [&]() constexpr noexcept -> decltype(auto) {
+					if constexpr(std::same_as<base0, baseX>) return x;
+					if constexpr(std::same_as<base0, baseY>) return y;
+					if constexpr(std::same_as<base0, baseZ>) return z;
+				}()),
+				
+				base1( [&]() constexpr noexcept -> decltype(auto) {
+					if constexpr(std::same_as<base1, baseX>) return x;
+					if constexpr(std::same_as<base1, baseY>) return y;
+					if constexpr(std::same_as<base1, baseZ>) return z;
+				}()),
+				
+				base2( [&]() constexpr noexcept -> decltype(auto) {
+					if constexpr(std::same_as<base2, baseX>) return x;
+					if constexpr(std::same_as<base2, baseY>) return y;
+					if constexpr(std::same_as<base2, baseZ>) return z;
+				}()) {}
 			
 		};
 		
-		constexpr VecBase<int, float, char> b{1,2,3};
+		template<typename X, typename Y, typename Z>
+		class Vec: public VecBase<X, Y, Z> {
+			
+			private:
+			using base = VecBase<X, Y, Z>;
+			using meta = typename base::meta;
+			
+			using baseX = typename base::baseX;
+			using baseY = typename base::baseY;
+			using baseZ = typename base::baseZ;
+			
+			
+			
+			/* Default constructor */
+			
+			public: constexpr
+			Vec()
+			noexcept(noexcept(base()))
+			requires(std::default_initializable<base>)
+			: base() {}
+			
+		};
+		
+		template<typename X, typename Y, typename Z> Vec(X, Y, Z) -> Vec<
+			std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
+			std::conditional_t<(std::same_as<Y, std::nullptr_t>), void, Y>,
+			std::conditional_t<(std::same_as<Z, std::nullptr_t>), void, Z>
+		>;
+		
+		template<typename X, typename Y> Vec(X, Y) -> Vec<
+			std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
+			std::conditional_t<(std::same_as<Y, std::nullptr_t>), void, Y>,
+			void
+		>;
+		
+		template<typename X> Vec(X) -> Vec<
+			std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>, void, void
+		>;
+		
+		
+		
 		
 	}
 }
