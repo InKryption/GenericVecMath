@@ -313,6 +313,80 @@ namespace ink {
 		
 		
 		
+		public: friend constexpr decltype(auto)
+		operator+(temp_reference_to<Vec> auto&& v)
+		noexcept(noexcept( +v.x, +v.y, +v.z ))
+		requires requires(decltype(v) v)
+		{ {+v.x}; {+v.y}; {+v.z}; }
+		{
+			using detail::Noop;
+			
+			decltype(auto) x_out = +v.x;
+			decltype(auto) y_out = +v.y;
+			decltype(auto) z_out = +v.z;
+			
+			using rOX = decltype(x_out);
+			using rOY = decltype(y_out);
+			using rOZ = decltype(z_out);
+			
+			constexpr auto
+			xNoop = (std::same_as<Noop, rOX>),
+			yNoop = (std::same_as<Noop, rOY>),
+			zNoop = (std::same_as<Noop, rOZ>);
+			
+			using OX = std::conditional_t<(xNoop), void, rOX>;
+			using OY = std::conditional_t<(yNoop), void, rOY>;
+			using OZ = std::conditional_t<(zNoop), void, rOZ>;
+			
+			using OXArg = std::conditional_t<(xNoop), std::nullptr_t, rOX>;
+			using OYArg = std::conditional_t<(yNoop), std::nullptr_t, rOY>;
+			using OZArg = std::conditional_t<(zNoop), std::nullptr_t, rOZ>;
+			
+			return Vec<OX, OY, OZ> (
+				static_cast<OXArg>(x_out),
+				static_cast<OYArg>(y_out),
+				static_cast<OZArg>(z_out)
+			);
+		}
+		
+		public: friend constexpr decltype(auto)
+		operator-(temp_reference_to<Vec> auto&& v)
+		noexcept(noexcept( -v.x, -v.y, -v.z ))
+		requires requires(decltype(v) v)
+		{ {-v.x}; {-v.y}; {-v.z}; }
+		{
+			using detail::Noop;
+			
+			decltype(auto) x_out = -v.x;
+			decltype(auto) y_out = -v.y;
+			decltype(auto) z_out = -v.z;
+			
+			using rOX = decltype(x_out);
+			using rOY = decltype(y_out);
+			using rOZ = decltype(z_out);
+			
+			constexpr auto
+			xNoop = (std::same_as<Noop, rOX>),
+			yNoop = (std::same_as<Noop, rOY>),
+			zNoop = (std::same_as<Noop, rOZ>);
+			
+			using OX = std::conditional_t<(xNoop), void, rOX>;
+			using OY = std::conditional_t<(yNoop), void, rOY>;
+			using OZ = std::conditional_t<(zNoop), void, rOZ>;
+			
+			using OXArg = std::conditional_t<(xNoop), std::nullptr_t, rOX>;
+			using OYArg = std::conditional_t<(yNoop), std::nullptr_t, rOY>;
+			using OZArg = std::conditional_t<(zNoop), std::nullptr_t, rOZ>;
+			
+			return Vec<OX, OY, OZ> (
+				static_cast<OXArg>(x_out),
+				static_cast<OYArg>(y_out),
+				static_cast<OZArg>(z_out)
+			);
+		}
+		
+		
+		
 		public: template<typename RX, typename RY, typename RZ>
 		friend constexpr decltype(auto)
 		operator+(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
@@ -350,6 +424,154 @@ namespace ink {
 			);
 		}
 		
+		public: template<typename RX, typename RY, typename RZ>
+		friend constexpr decltype(auto)
+		operator-(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(noexcept( (lhs.x - rhs.x), (lhs.y - rhs.y), (lhs.z - rhs.z) ))
+		requires requires(decltype(lhs) lhs, decltype(rhs) rhs)
+		{ {lhs.x - rhs.x}; {lhs.y - rhs.y}; {lhs.z - rhs.z}; }
+		{
+			using detail::Noop;
+			
+			decltype(auto) x_out = lhs.x - rhs.x;
+			decltype(auto) y_out = lhs.y - rhs.y;
+			decltype(auto) z_out = lhs.z - rhs.z;
+			
+			using rOX = decltype(x_out);
+			using rOY = decltype(y_out);
+			using rOZ = decltype(z_out);
+			
+			constexpr auto
+			xNoop = (std::same_as<Noop, rOX>),
+			yNoop = (std::same_as<Noop, rOY>),
+			zNoop = (std::same_as<Noop, rOZ>);
+			
+			using OX = std::conditional_t<(xNoop), void, rOX>;
+			using OY = std::conditional_t<(yNoop), void, rOY>;
+			using OZ = std::conditional_t<(zNoop), void, rOZ>;
+			
+			using OXArg = std::conditional_t<(xNoop), std::nullptr_t, rOX>;
+			using OYArg = std::conditional_t<(yNoop), std::nullptr_t, rOY>;
+			using OZArg = std::conditional_t<(zNoop), std::nullptr_t, rOZ>;
+			
+			return Vec<OX, OY, OZ> (
+				static_cast<OXArg>(x_out),
+				static_cast<OYArg>(y_out),
+				static_cast<OZArg>(z_out)
+			);
+		}
+		
+		public: template<typename RX, typename RY, typename RZ>
+		friend constexpr decltype(auto)
+		operator*(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(noexcept( (lhs.x * rhs.x), (lhs.y * rhs.y), (lhs.z * rhs.z) ))
+		requires requires(decltype(lhs) lhs, decltype(rhs) rhs)
+		{ {lhs.x * rhs.x}; {lhs.y * rhs.y}; {lhs.z * rhs.z}; }
+		{
+			using detail::Noop;
+			
+			decltype(auto) x_out = lhs.x * rhs.x;
+			decltype(auto) y_out = lhs.y * rhs.y;
+			decltype(auto) z_out = lhs.z * rhs.z;
+			
+			using rOX = decltype(x_out);
+			using rOY = decltype(y_out);
+			using rOZ = decltype(z_out);
+			
+			constexpr auto
+			xNoop = (std::same_as<Noop, rOX>),
+			yNoop = (std::same_as<Noop, rOY>),
+			zNoop = (std::same_as<Noop, rOZ>);
+			
+			using OX = std::conditional_t<(xNoop), void, rOX>;
+			using OY = std::conditional_t<(yNoop), void, rOY>;
+			using OZ = std::conditional_t<(zNoop), void, rOZ>;
+			
+			using OXArg = std::conditional_t<(xNoop), std::nullptr_t, rOX>;
+			using OYArg = std::conditional_t<(yNoop), std::nullptr_t, rOY>;
+			using OZArg = std::conditional_t<(zNoop), std::nullptr_t, rOZ>;
+			
+			return Vec<OX, OY, OZ> (
+				static_cast<OXArg>(x_out),
+				static_cast<OYArg>(y_out),
+				static_cast<OZArg>(z_out)
+			);
+		}
+		
+		public: template<typename RX, typename RY, typename RZ>
+		friend constexpr decltype(auto)
+		operator/(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(noexcept( (lhs.x / rhs.x), (lhs.y / rhs.y), (lhs.z / rhs.z) ))
+		requires requires(decltype(lhs) lhs, decltype(rhs) rhs)
+		{ {lhs.x / rhs.x}; {lhs.y / rhs.y}; {lhs.z / rhs.z}; }
+		{
+			using detail::Noop;
+			
+			decltype(auto) x_out = lhs.x / rhs.x;
+			decltype(auto) y_out = lhs.y / rhs.y;
+			decltype(auto) z_out = lhs.z / rhs.z;
+			
+			using rOX = decltype(x_out);
+			using rOY = decltype(y_out);
+			using rOZ = decltype(z_out);
+			
+			constexpr auto
+			xNoop = (std::same_as<Noop, rOX>),
+			yNoop = (std::same_as<Noop, rOY>),
+			zNoop = (std::same_as<Noop, rOZ>);
+			
+			using OX = std::conditional_t<(xNoop), void, rOX>;
+			using OY = std::conditional_t<(yNoop), void, rOY>;
+			using OZ = std::conditional_t<(zNoop), void, rOZ>;
+			
+			using OXArg = std::conditional_t<(xNoop), std::nullptr_t, rOX>;
+			using OYArg = std::conditional_t<(yNoop), std::nullptr_t, rOY>;
+			using OZArg = std::conditional_t<(zNoop), std::nullptr_t, rOZ>;
+			
+			return Vec<OX, OY, OZ> (
+				static_cast<OXArg>(x_out),
+				static_cast<OYArg>(y_out),
+				static_cast<OZArg>(z_out)
+			);
+		}
+		
+		public: template<typename RX, typename RY, typename RZ>
+		friend constexpr decltype(auto)
+		operator%(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(noexcept( (lhs.x % rhs.x), (lhs.y % rhs.y), (lhs.z % rhs.z) ))
+		requires requires(decltype(lhs) lhs, decltype(rhs) rhs)
+		{ {lhs.x % rhs.x}; {lhs.y % rhs.y}; {lhs.z % rhs.z}; }
+		{
+			using detail::Noop;
+			
+			decltype(auto) x_out = lhs.x % rhs.x;
+			decltype(auto) y_out = lhs.y % rhs.y;
+			decltype(auto) z_out = lhs.z % rhs.z;
+			
+			using rOX = decltype(x_out);
+			using rOY = decltype(y_out);
+			using rOZ = decltype(z_out);
+			
+			constexpr auto
+			xNoop = (std::same_as<Noop, rOX>),
+			yNoop = (std::same_as<Noop, rOY>),
+			zNoop = (std::same_as<Noop, rOZ>);
+			
+			using OX = std::conditional_t<(xNoop), void, rOX>;
+			using OY = std::conditional_t<(yNoop), void, rOY>;
+			using OZ = std::conditional_t<(zNoop), void, rOZ>;
+			
+			using OXArg = std::conditional_t<(xNoop), std::nullptr_t, rOX>;
+			using OYArg = std::conditional_t<(yNoop), std::nullptr_t, rOY>;
+			using OZArg = std::conditional_t<(zNoop), std::nullptr_t, rOZ>;
+			
+			return Vec<OX, OY, OZ> (
+				static_cast<OXArg>(x_out),
+				static_cast<OYArg>(y_out),
+				static_cast<OZArg>(z_out)
+			);
+		}
+		
 	};
 	
 	template<typename X, typename Y, typename Z> Vec(X, Y, Z) -> Vec<X, Y, Z>;
@@ -358,6 +580,8 @@ namespace ink {
 	template<typename X, typename Y> Vec(X, Y, std::nullptr_t) -> Vec<X, Y, void>;
 	template<typename X, typename Z> Vec(X, std::nullptr_t, Z) -> Vec<X, void, Z>;
 	template<typename Y, typename Z> Vec(std::nullptr_t, Y, Z) -> Vec<void, Y, Z>;
+	
+	template<typename X, typename Y> Vec(X, Y) -> Vec<X, Y, void>;
 	
 	template<typename X> Vec(X, std::nullptr_t, std::nullptr_t) -> Vec<X, void, void>;
 	template<typename Y> Vec(std::nullptr_t, Y, std::nullptr_t) -> Vec<void, Y, void>;
