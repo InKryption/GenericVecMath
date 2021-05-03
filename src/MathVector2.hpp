@@ -62,8 +62,8 @@ namespace ink {
 			template<typename T> explicit constexpr operator T() noexcept(T()) { return T(); }
 			
 			#define BinaryOp(op)																			\
-			template<typename T> friend constexpr T operator op(Noop, T&& rhs) noexcept { return rhs; }	\
-			template<typename T> friend constexpr T operator op(T&& lhs, Noop) noexcept { return lhs; }	\
+			template<typename T> friend constexpr std::remove_cvref_t<T> operator op(Noop, T&& rhs) noexcept { return rhs; }	\
+			template<typename T> friend constexpr std::remove_cvref_t<T> operator op(T&& lhs, Noop) noexcept { return lhs; }	\
 			friend constexpr decltype(auto) operator op(Noop, Noop) noexcept {	return Noop();	}
 				BinaryOp(<=>)
 				BinaryOp(==)	BinaryOp(!=)
@@ -320,7 +320,6 @@ namespace ink {
 		
 		
 		public: template<typename RX, typename RY, typename RZ>
-		requires(compatible_arith_axies<RX, RY, RZ>)
 		friend constexpr decltype(auto)
 		operator+(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
 		noexcept(noexcept( (lhs.x + rhs.x), (lhs.y + rhs.y), (lhs.z + rhs.z) ))
