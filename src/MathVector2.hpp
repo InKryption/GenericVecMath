@@ -54,69 +54,56 @@ namespace ink {
 	template<typename From, typename To, typename OrDefault = std::nullptr_t>
 	concept tmp_ref_or_default = temp_reference_to<From, To> || std::same_as<From, OrDefault>;
 	
-	/**
-	 * This is a utility construct; it can be operated on with anything, but always produce a noop,
-	 * either returning the other operated variable reference, or itself in the case of unary operations.
-	 * This applies as well to operations involving comparisons (returns the appropriate reference to the
-	 * left-hand-side or right-hand-side argument). 
-	 * It is an empty struct, therefore empty-base-like optimization can be applied using [[no_unique_address]] on supporting
-	 * compilers.
-	 * Note:
-	 * It is -implicitly- default constructible.
-	 * It is -implicitly- constructible from any type T.
-	 * It is -explicitly- convertible to any type T.
-	 * This means that Noop can essentially be a dummy-target for initializations, but will warn
-	 * if the user converts Noop to another type without statically casting it to the desired type.
-	 */
-	struct Noop {
-		constexpr			Noop(std::nullptr_t = nullptr) noexcept {}
-		explicit constexpr	Noop([[maybe_unused]] auto&&) noexcept {}
-		template<typename T> explicit constexpr operator T() noexcept(T()) { return T(); }
-		
-		#define BinaryOp(op)																			\
-		friend constexpr decltype(auto) operator op(Noop, auto&& rhs)	noexcept {	return rhs;		}	\
-		friend constexpr decltype(auto) operator op(auto&& lhs, Noop)	noexcept {	return lhs;		}	\
-		friend constexpr decltype(auto) operator op(Noop, Noop)			noexcept {	return Noop();	}
-			BinaryOp(==)	BinaryOp(!=)
-			BinaryOp(>=)	BinaryOp(>)
-			BinaryOp(<=)	BinaryOp(<)
-			BinaryOp(+)		BinaryOp(-)
-			BinaryOp(*)		BinaryOp(/)		BinaryOp(%)
-			BinaryOp(|)		BinaryOp(&)		BinaryOp(^)
-			BinaryOp(>>)	BinaryOp(<<)
-			BinaryOp(&&)	BinaryOp(||)	BinaryOp(<=>)
-		#undef BinaryOp
-		
-		#define UnaryOp(op)	friend constexpr decltype(auto) operator op(temp_reference_to<Noop> auto&& noop) noexcept { return noop; }
-			UnaryOp(+)		UnaryOp(-)
-			UnaryOp(!)		UnaryOp(~)
-			UnaryOp(*)		UnaryOp(&)
-		#undef UnaryOp
-		
-		#define ShortHandOp(op, arg) constexpr decltype(auto) operator op(arg) const noexcept { return *this; }
-			ShortHandOp(++, int)
-			ShortHandOp(--,int)
-			ShortHandOp(++,)
-			ShortHandOp(--,)
-		#undef ShortHandOp
-		
-		#define AssignOp(op) constexpr decltype(auto) operator op(auto&& rhs) const noexcept { return *this; }
-			AssignOp(=)
-			AssignOp(+=)	AssignOp(-=)
-			AssignOp(*=)	AssignOp(/=)	AssignOp(%=)
-			AssignOp(|=)	AssignOp(&=)	AssignOp(^=)
-			AssignOp(>>=)	AssignOp(<<=)
-		#undef AssignOp
-		
-		template<typename... Args> constexpr decltype(auto)
-		operator()([[maybe_unused]] Args&&...) const noexcept { return *this; }
-		
-		template<typename T> constexpr decltype(auto)
-		operator[]([[maybe_unused]] T&&) const noexcept { return *this; }
-		
-	};
-	
 	namespace detail {
+		
+		struct Noop {
+			constexpr			Noop(std::nullptr_t = nullptr) noexcept {}
+			explicit constexpr	Noop([[maybe_unused]] auto&&) noexcept {}
+			template<typename T> explicit constexpr operator T() noexcept(T()) { return T(); }
+			
+			#define BinaryOp(op)																			\
+			template<typename T> friend constexpr T operator op(Noop, T&& rhs) noexcept { return rhs; }	\
+			template<typename T> friend constexpr T operator op(T&& lhs, Noop) noexcept { return lhs; }	\
+			friend constexpr decltype(auto) operator op(Noop, Noop) noexcept {	return Noop();	}
+				BinaryOp(<=>)
+				BinaryOp(==)	BinaryOp(!=)
+				BinaryOp(>=)	BinaryOp(>)
+				BinaryOp(<=)	BinaryOp(<)
+				BinaryOp(+)		BinaryOp(-)
+				BinaryOp(*)		BinaryOp(/)		BinaryOp(%)
+				BinaryOp(|)		BinaryOp(&)		BinaryOp(^)
+				BinaryOp(>>)	BinaryOp(<<)
+				BinaryOp(&&)	BinaryOp(||)
+			#undef BinaryOp
+			
+			#define UnaryOp(op)	friend constexpr decltype(auto) operator op(temp_reference_to<Noop> auto&& noop) noexcept { return noop; }
+				UnaryOp(+)		UnaryOp(-)
+				UnaryOp(!)		UnaryOp(~)
+				UnaryOp(*)		UnaryOp(&)
+			#undef UnaryOp
+			
+			#define ShortHandOp(op, arg) constexpr decltype(auto) operator op(arg) const noexcept { return *this; }
+				ShortHandOp(++, int)
+				ShortHandOp(--,int)
+				ShortHandOp(++,)
+				ShortHandOp(--,)
+			#undef ShortHandOp
+			
+			#define AssignOp(op) constexpr decltype(auto) operator op(auto&& rhs) const noexcept { return *this; }
+				AssignOp(=)
+				AssignOp(+=)	AssignOp(-=)
+				AssignOp(*=)	AssignOp(/=)	AssignOp(%=)
+				AssignOp(|=)	AssignOp(&=)	AssignOp(^=)
+				AssignOp(>>=)	AssignOp(<<=)
+			#undef AssignOp
+			
+			template<typename... Args> constexpr decltype(auto)
+			operator()([[maybe_unused]] Args&&...) const noexcept { return *this; }
+			
+			template<typename T> constexpr decltype(auto)
+			operator[]([[maybe_unused]] T&&) const noexcept { return *this; }
+			
+		};
 		
 		enum class XYZ { X , Y , Z };
 		template<typename T, XYZ tag> struct Axis;
@@ -246,6 +233,8 @@ namespace ink {
 	template<typename X, typename Y, typename Z>
 	class Vec: public detail::VecBase<X, Y, Z> {
 		
+		template<typename, typename, typename> friend class Vec;
+		
 		private:
 		using base = detail::VecBase<X, Y, Z>;
 		using meta = typename base::meta;
@@ -271,6 +260,16 @@ namespace ink {
 		Vec(tmp_ref_or_default<ctrX> auto&& x, tmp_ref_or_default<ctrY> auto&& y, tmp_ref_or_default<ctrZ> auto&& z)
 		noexcept(noexcept( base(x, y, z) ))
 		: base(x, y, z) {}
+		
+		public: template<typename OX, typename OY, typename OZ> constexpr
+		Vec(Vec<OX, OY, OZ> const& other)
+		noexcept(noexcept(base(other.x, other.y, other.z)))
+		: base(other.x, other.y, other.z) {}
+		
+		public: template<typename OX, typename OY, typename OZ> constexpr
+		Vec(Vec<OX, OY, OZ> && other)
+		noexcept(noexcept(base(other.x, other.y, other.z)))
+		: base(other.x, other.y, other.z) {}
 		
 		
 		
@@ -306,11 +305,57 @@ namespace ink {
 		requires(std::same_as<void, X> && (std::same_as<void, Z> && std::default_initializable<baseZ>))
 		: base(nullptr, y, nullptr) {}
 		
-		public: constexpr
-		Vec(tmp_ref_or_default<ctrZ> auto&& z)
+		public: constexpr explicit
+		Vec(auto&& z)
 		noexcept(noexcept( base(nullptr, nullptr, z) ))
 		requires(std::same_as<void, X> && std::same_as<void, Y>)
 		: base(nullptr, nullptr, z) {}
+		
+		
+		private: template<typename RX, typename RY, typename RZ>
+		static constexpr bool compatible_arith_axies
+		=	((std::same_as<X, void> && std::same_as<RX, void>) || (!std::same_as<X, void> && !std::same_as<RX, void>))
+		&&	((std::same_as<Y, void> && std::same_as<RY, void>) || (!std::same_as<Y, void> && !std::same_as<RY, void>))
+		&&	((std::same_as<Z, void> && std::same_as<RZ, void>) || (!std::same_as<Z, void> && !std::same_as<RZ, void>));
+		
+		
+		public: template<typename RX, typename RY, typename RZ>
+		requires(compatible_arith_axies<RX, RY, RZ>)
+		friend constexpr decltype(auto)
+		operator+(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(noexcept( (lhs.x + rhs.x), (lhs.y + rhs.y), (lhs.z + rhs.z) ))
+		requires requires(decltype(lhs) lhs, decltype(rhs) rhs)
+		{ {lhs.x + rhs.x}; {lhs.y + rhs.y}; {lhs.z + rhs.z}; }
+		{
+			using detail::Noop;
+			
+			decltype(auto) x_out = lhs.x + rhs.x;
+			decltype(auto) y_out = lhs.y + rhs.y;
+			decltype(auto) z_out = lhs.z + rhs.z;
+			
+			using rOX = decltype(x_out);
+			using rOY = decltype(y_out);
+			using rOZ = decltype(z_out);
+			
+			constexpr auto
+			xNoop = (std::same_as<Noop, rOX>),
+			yNoop = (std::same_as<Noop, rOY>),
+			zNoop = (std::same_as<Noop, rOZ>);
+			
+			using OX = std::conditional_t<(xNoop), void, rOX>;
+			using OY = std::conditional_t<(yNoop), void, rOY>;
+			using OZ = std::conditional_t<(zNoop), void, rOZ>;
+			
+			using OXArg = std::conditional_t<(xNoop), std::nullptr_t, rOX>;
+			using OYArg = std::conditional_t<(yNoop), std::nullptr_t, rOY>;
+			using OZArg = std::conditional_t<(zNoop), std::nullptr_t, rOZ>;
+			
+			return Vec<OX, OY, OZ> (
+				static_cast<OXArg>(x_out),
+				static_cast<OYArg>(y_out),
+				static_cast<OZArg>(z_out)
+			);
+		}
 		
 	};
 	
