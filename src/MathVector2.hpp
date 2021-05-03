@@ -367,6 +367,8 @@ namespace ink {
 	template<typename Y> Vec(std::nullptr_t, Y) -> Vec<void, Y, void>;
 	template<typename X> Vec(X) -> Vec<X, void, void>;
 	
+	template<typename X, typename Y, typename Z> Vec(Vec<X, Y, Z>) -> Vec<std::remove_cvref_t<X>, std::remove_cvref_t<Y>, std::remove_cvref_t<Z>>;
+	
 }
 
 #endif
