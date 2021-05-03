@@ -12,7 +12,9 @@ struct Signal {
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
 	constexpr
-	ink::Vec f(1, 2ULL);
+	ink::Vec<int, void, char> vec1(nullptr, nullptr, 2);
+	
+	printf("%i\n", vec1.x);
 	
 	return 0;
 }
