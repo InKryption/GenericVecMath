@@ -62,8 +62,8 @@ namespace ink {
 			template<typename T> explicit constexpr operator T() noexcept(T()) { return T(); }
 			
 			#define BinaryOp(op)																			\
-			template<typename T> friend constexpr std::remove_cvref_t<T> operator op(Noop, T&& rhs) noexcept { return rhs; }	\
-			template<typename T> friend constexpr std::remove_cvref_t<T> operator op(T&& lhs, Noop) noexcept { return lhs; }	\
+			template<typename T> friend constexpr T operator op(Noop, T&& rhs) noexcept { return rhs; }	\
+			template<typename T> friend constexpr T operator op(T&& lhs, Noop) noexcept { return lhs; }	\
 			friend constexpr decltype(auto) operator op(Noop, Noop) noexcept {	return Noop();	}
 				BinaryOp(<=>)
 				BinaryOp(==)	BinaryOp(!=)

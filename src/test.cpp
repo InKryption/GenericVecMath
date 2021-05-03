@@ -9,7 +9,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	constexpr ink::Vec vec1(1,	2,		nullptr);
 	constexpr ink::Vec vec2(2,	2.f,	1);
 	
-	constexpr ink::Vec vec3 = vec1 + vec2;
+	ink::Vec<int, float, int const&> vec3 = vec1 + vec2;
 	
 	constexpr auto b = std::convertible_to<std::nullptr_t, char&>;
 	
