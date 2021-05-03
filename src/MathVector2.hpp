@@ -312,12 +312,6 @@ namespace ink {
 		: base(nullptr, nullptr, z) {}
 		
 		
-		private: template<typename RX, typename RY, typename RZ>
-		static constexpr bool compatible_arith_axies
-		=	((std::same_as<X, void> && std::same_as<RX, void>) || (!std::same_as<X, void> && !std::same_as<RX, void>))
-		&&	((std::same_as<Y, void> && std::same_as<RY, void>) || (!std::same_as<Y, void> && !std::same_as<RY, void>))
-		&&	((std::same_as<Z, void> && std::same_as<RZ, void>) || (!std::same_as<Z, void> && !std::same_as<RZ, void>));
-		
 		
 		public: template<typename RX, typename RY, typename RZ>
 		friend constexpr decltype(auto)
