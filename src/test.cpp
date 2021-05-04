@@ -8,7 +8,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	constexpr ink::Vec vec1(-1, 8, -3);
 	constexpr ink::Vec vec2(4, 2);
 	
-	constexpr ink::Vec vec3 = - vec2;
+	constexpr ink::Vec vec3 = vec1 / vec2;
 	
 	printf("%i %i %i\n", vec3.x, vec3.y, vec3.y);
 	
