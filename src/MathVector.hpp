@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <cmath>
 #include <concepts>
+#include <tuple>
 
 
 
@@ -127,6 +128,45 @@ namespace ink {
 			public: template<size_t i>
 			using AxisAt = GetAxis< AxisAtIndex<i> >;
 			
+			public: template<Tag tag> static constexpr decltype(auto)
+			get_axis(auto&& v) noexcept {
+				switch(tag) {
+					case Tag::X:
+						if constexpr(is_void<Tag::X>) return nullptr;
+						else return v.x;
+					case Tag::Y:
+						if constexpr(is_void<Tag::Y>) return nullptr;
+						else return v.Y;
+					case Tag::Z:
+						if constexpr(is_void<Tag::Z>) return nullptr;
+						else return v.z;
+				}
+			}
+			
+			template<XYZ tag> static constexpr decltype(auto)
+			CONDITIONAL_VEC_OP(auto&& op, auto&& lhs, auto&& rhs) {
+				using detail::Noop;
+				
+				auto&& [l, r] = [&]() constexpr {
+					if		constexpr(tag == XYZ::X)	return std::tie(lhs.x, rhs.x);
+					else if	constexpr(tag == XYZ::Y)	return std::tie(lhs.y, rhs.y);
+					else if	constexpr(tag == XYZ::Z)	return std::tie(lhs.z, rhs.z);
+				}();
+				
+				using Lhs = std::remove_cvref_t<decltype(l)>;
+				using Rhs = std::remove_cvref_t<decltype(r)>;
+				
+				constexpr bool
+				lnoop = std::same_as<Lhs, Noop>,
+				rnoop = std::same_as<Rhs, Noop>;
+				
+				if		constexpr(!lnoop && !rnoop)	return op(l, r);
+				else if	constexpr( lnoop &&  rnoop)	return nullptr;
+				else if	constexpr(!rnoop)			return r;
+				else if	constexpr(!lnoop)			return l;
+				
+			}
+			
 		};
 		
 		template<typename X, typename Y, typename Z, typename MetaInfo = AxisGroupMetaInfo<X, Y, Z>>
@@ -135,6 +175,10 @@ namespace ink {
 			public MetaInfo::AxisAt<1>,
 			public MetaInfo::AxisAt<2>
 		{
+			
+			template<typename, typename, typename> friend class Vec;
+			template<typename, typename, typename> friend struct AxisGroupMetaInfo;
+			template<typename, typename, typename, typename> friend struct VecBase;
 			
 			protected:	using meta = MetaInfo;
 			
@@ -175,27 +219,13 @@ namespace ink {
 			
 		};
 		
-		static constexpr auto MUL_AXIS_COMP = []<typename T, typename U>(T&& l, U&& r) constexpr -> decltype(auto) {
-			using Lhs = std::remove_cvref_t<T>;
-			using Rhs = std::remove_cvref_t<U>;
-			
-			if constexpr(std::same_as<Lhs, Noop> && std::same_as<Rhs, Noop>)
-			{ return nullptr; }
-			else if constexpr(!std::same_as<Lhs, Noop> && !std::same_as<Rhs, Noop>)
-			{ return l * r; }
-			else if constexpr(!std::same_as<Rhs, Noop>)
-			{ return r; }
-			else if constexpr(!std::same_as<Lhs, Noop>)
-			{ return l; }
-			
-		};
-		
 	}
 	
 	template<typename X, typename Y, typename Z>
 	class Vec: public detail::VecBase<X, Y, Z> {
 		
 		template<typename, typename, typename> friend class Vec;
+		template<typename, typename, typename> struct VecBase;
 		
 		private:
 		using base = detail::VecBase<X, Y, Z>;
@@ -276,34 +306,122 @@ namespace ink {
 		
 		
 		public: template<typename RVec>
-		requires (SameTemplate<RVec, Vec>) && requires(Vec const& lhs, RVec const& rhs) {
-			detail::MUL_AXIS_COMP(lhs.x, rhs.x);
-			detail::MUL_AXIS_COMP(lhs.y, rhs.y);
-			detail::MUL_AXIS_COMP(lhs.z, rhs.z);
-		}
+		requires (SameTemplate<RVec, Vec>)
 		friend constexpr decltype(auto)
 		operator*(Vec const& lhs, RVec const& rhs)
 		{
 			return ink::Vec(
-				detail::MUL_AXIS_COMP(lhs.x, rhs.x),
-				detail::MUL_AXIS_COMP(lhs.y, rhs.y),
-				detail::MUL_AXIS_COMP(lhs.z, rhs.z)
+				meta::template CONDITIONAL_VEC_OP<XYZ::X>([](auto&& lhs, auto&& rhs) { return lhs * rhs; }, lhs, rhs),
+				meta::template CONDITIONAL_VEC_OP<XYZ::Y>([](auto&& lhs, auto&& rhs) { return lhs * rhs; }, lhs, rhs),
+				meta::template CONDITIONAL_VEC_OP<XYZ::Z>([](auto&& lhs, auto&& rhs) { return lhs * rhs; }, lhs, rhs)
 			);
 		}
 		
 		public: template<typename T>
-		requires (!SameTemplate<T, Vec>) && requires(Vec const& lhs, Vec<T, T, T>&& rhs)
-		{ {lhs * rhs}; }
+		requires (!SameTemplate<T, Vec>)
 		friend constexpr decltype(auto)
 		operator*(Vec const& lhs, T const& rhs)
-		{ return ink::Vec(lhs * ink::Vec<T, T, T>(rhs, rhs, rhs)); }
+		{
+			decltype(auto) rhs_vec = ink::Vec(
+				[&]() constexpr { if constexpr(std::same_as<void, X>) { return nullptr; } else { return rhs; } }(),
+				[&]() constexpr { if constexpr(std::same_as<void, Y>) { return nullptr; } else { return rhs; } }(),
+				[&]() constexpr { if constexpr(std::same_as<void, Z>) { return nullptr; } else { return rhs; } }()
+			);
+			
+			return ink::Vec(lhs * rhs_vec);
+		}
 		
 		public: template<typename T>
-		requires (!SameTemplate<T, Vec>) && requires(Vec<T, T, T> && lhs, Vec const& rhs)
-		{ {lhs * rhs}; }
+		requires (!SameTemplate<T, Vec>)
 		friend constexpr decltype(auto)
 		operator*(T const& lhs, Vec const& rhs)
-		{ return ink::Vec(ink::Vec<T, T, T>(lhs, lhs, lhs) * rhs); }
+		{
+			decltype(auto) lhs_vec = ink::Vec(
+				[&]() constexpr { if constexpr(std::same_as<void, X>) { return nullptr; } else { return lhs; } }(),
+				[&]() constexpr { if constexpr(std::same_as<void, Y>) { return nullptr; } else { return lhs; } }(),
+				[&]() constexpr { if constexpr(std::same_as<void, Z>) { return nullptr; } else { return lhs; } }()
+			);
+			
+			return ink::Vec(lhs_vec * rhs);
+		}
+		
+		
+		
+		public: template<typename RVec>
+		requires (SameTemplate<RVec, Vec>)
+		friend constexpr decltype(auto)
+		operator/(Vec const& lhs, RVec const& rhs)
+		{
+			return ink::Vec(
+				meta::template CONDITIONAL_VEC_OP<XYZ::X>([](auto&& lhs, auto&& rhs) { return lhs / rhs; }, lhs, rhs),
+				meta::template CONDITIONAL_VEC_OP<XYZ::Y>([](auto&& lhs, auto&& rhs) { return lhs / rhs; }, lhs, rhs),
+				meta::template CONDITIONAL_VEC_OP<XYZ::Z>([](auto&& lhs, auto&& rhs) { return lhs / rhs; }, lhs, rhs)
+			);
+		}
+		
+		public: template<typename T>
+		requires (!SameTemplate<T, Vec>)
+		friend constexpr decltype(auto)
+		operator/(Vec const& lhs, T const& rhs)
+		{
+			decltype(auto) rhs_vec = ink::Vec(
+				[&]() constexpr { if constexpr(std::same_as<void, X>) { return nullptr; } else { return rhs; } }(),
+				[&]() constexpr { if constexpr(std::same_as<void, Y>) { return nullptr; } else { return rhs; } }(),
+				[&]() constexpr { if constexpr(std::same_as<void, Z>) { return nullptr; } else { return rhs; } }()
+			);
+			
+			return ink::Vec(lhs / rhs_vec);
+		}
+		
+		public: template<typename T>
+		requires (!SameTemplate<T, Vec>)
+		friend constexpr decltype(auto)
+		operator/(T const& lhs, Vec const& rhs)
+		{
+			decltype(auto) lhs_vec = ink::Vec(
+				[&]() constexpr { if constexpr(std::same_as<void, X>) { return nullptr; } else { return lhs; } }(),
+				[&]() constexpr { if constexpr(std::same_as<void, Y>) { return nullptr; } else { return lhs; } }(),
+				[&]() constexpr { if constexpr(std::same_as<void, Z>) { return nullptr; } else { return lhs; } }()
+			);
+			
+			return ink::Vec(lhs_vec / rhs);
+		}
+		
+		
+		
+		public: template<typename RVec>
+		requires (SameTemplate<RVec, Vec>)
+		friend constexpr decltype(auto)
+		operator+(Vec const& lhs, RVec const& rhs)
+		{
+			return ink::Vec(
+				meta::template CONDITIONAL_VEC_OP<XYZ::X>([](auto&& lhs, auto&& rhs) { return lhs + rhs; }, lhs, rhs),
+				meta::template CONDITIONAL_VEC_OP<XYZ::Y>([](auto&& lhs, auto&& rhs) { return lhs + rhs; }, lhs, rhs),
+				meta::template CONDITIONAL_VEC_OP<XYZ::Z>([](auto&& lhs, auto&& rhs) { return lhs + rhs; }, lhs, rhs)
+			);
+		}
+		
+		public: friend constexpr decltype(auto)
+		operator+(Vec const& v)
+		{ return ink::Vec(+v.x, +v.y, +v.z); }
+		
+		
+		
+		public: template<typename RVec>
+		requires (SameTemplate<RVec, Vec>)
+		friend constexpr decltype(auto)
+		operator-(Vec const& lhs, RVec const& rhs)
+		{
+			return ink::Vec(
+				meta::template CONDITIONAL_VEC_OP<XYZ::X>([](auto&& lhs, auto&& rhs) { return lhs - rhs; }, lhs, rhs),
+				meta::template CONDITIONAL_VEC_OP<XYZ::Y>([](auto&& lhs, auto&& rhs) { return lhs - rhs; }, lhs, rhs),
+				meta::template CONDITIONAL_VEC_OP<XYZ::Z>([](auto&& lhs, auto&& rhs) { return lhs - rhs; }, lhs, rhs)
+			);
+		}
+		
+		public: friend constexpr decltype(auto)
+		operator-(Vec const& v)
+		{ return ink::Vec(-v.x, -v.y, -v.z); }
 		
 	};
 	
