@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <utility>
 #include <type_traits>
+#include <cmath>
 #include <concepts>
 
 
@@ -56,53 +57,10 @@ namespace ink {
 	
 	namespace detail {
 		
-		struct Noop {
-			constexpr			Noop(std::nullptr_t = nullptr) noexcept {}
-			explicit constexpr	Noop([[maybe_unused]] auto&&) noexcept {}
-			template<typename T> explicit constexpr operator T() noexcept(T()) { return T(); }
-			
-			#define BinaryOp(op)																			\
-			template<typename T> friend constexpr T operator op(Noop, T&& rhs) noexcept { return rhs; }	\
-			template<typename T> friend constexpr T operator op(T&& lhs, Noop) noexcept { return lhs; }	\
-			friend constexpr decltype(auto) operator op(Noop, Noop) noexcept {	return Noop();	}
-				BinaryOp(<=>)
-				BinaryOp(==)	BinaryOp(!=)
-				BinaryOp(>=)	BinaryOp(>)
-				BinaryOp(<=)	BinaryOp(<)
-				BinaryOp(+)		BinaryOp(-)
-				BinaryOp(*)		BinaryOp(/)		BinaryOp(%)
-				BinaryOp(|)		BinaryOp(&)		BinaryOp(^)
-				BinaryOp(>>)	BinaryOp(<<)
-				BinaryOp(&&)	BinaryOp(||)
-			#undef BinaryOp
-			
-			#define UnaryOp(op)	friend constexpr decltype(auto) operator op(temp_reference_to<Noop> auto&& noop) noexcept { return noop; }
-				UnaryOp(+)		UnaryOp(-)
-				UnaryOp(!)		UnaryOp(~)
-				UnaryOp(*)		UnaryOp(&)
-			#undef UnaryOp
-			
-			#define ShortHandOp(op, arg) constexpr decltype(auto) operator op(arg) const noexcept { return *this; }
-				ShortHandOp(++, int)
-				ShortHandOp(--,int)
-				ShortHandOp(++,)
-				ShortHandOp(--,)
-			#undef ShortHandOp
-			
-			#define AssignOp(op) constexpr decltype(auto) operator op(auto&& rhs) const noexcept { return *this; }
-				AssignOp(=)
-				AssignOp(+=)	AssignOp(-=)
-				AssignOp(*=)	AssignOp(/=)	AssignOp(%=)
-				AssignOp(|=)	AssignOp(&=)	AssignOp(^=)
-				AssignOp(>>=)	AssignOp(<<=)
-			#undef AssignOp
-			
-			template<typename... Args> constexpr decltype(auto)
-			operator()([[maybe_unused]] Args&&...) const noexcept { return *this; }
-			
-			template<typename T> constexpr decltype(auto)
-			operator[]([[maybe_unused]] T&&) const noexcept { return *this; }
-			
+		struct Noop
+		{
+			constexpr operator std::nullptr_t() const noexcept { return nullptr; }
+			constexpr Noop(std::nullptr_t = nullptr) noexcept {}
 		};
 		
 		enum class XYZ { X , Y , Z };
@@ -159,8 +117,11 @@ namespace ink {
 			public: template<Tag tag>
 			using real_type = std::conditional_t<(tag == Tag::X), X, std::conditional_t<(tag == Tag::Y), Y, Z>>;
 			
+			public: template<Tag tag> static constexpr bool
+			is_void = std::same_as<void, real_type<tag>>;
+			
 			public: template<Tag tag>
-			using value_type = std::conditional_t<(std::is_same_v<real_type<tag>, void>), std::nullptr_t, real_type<tag>>;
+			using value_type = std::conditional_t<(is_void<tag>), std::nullptr_t, real_type<tag>>;
 			
 			public: template<Tag tag>
 			using GetAxis = detail::Axis<real_type<tag>, tag>;
@@ -205,26 +166,41 @@ namespace ink {
 			requires(std::default_initializable<base0> && std::default_initializable<base1> && std::default_initializable<base2>)
 			: base0(), base1(), base2() {}
 			
-			public: constexpr
-			VecBase(auto&& x, auto&& y, auto&& z)
-			noexcept(noexcept( baseX(x), baseY(y), baseZ(z) ))
+			public: template<typename OX, typename OY, typename OZ> constexpr
+			VecBase(OX&& x, OY&& y, OZ&& z)
+			noexcept(noexcept( baseX(std::forward<OX>(x)), baseY(std::forward<OY>(y)), baseZ(std::forward<OZ>(z)) ))
 			:	base0( [&]() constexpr noexcept -> decltype(auto) {
-					if constexpr(std::same_as<base0, baseX>) return x;
-					if constexpr(std::same_as<base0, baseY>) return y;
-					if constexpr(std::same_as<base0, baseZ>) return z;
+					if constexpr(std::same_as<base0, baseX>) { return std::forward<OX>(x); }
+					if constexpr(std::same_as<base0, baseY>) { return std::forward<OY>(y); }
+					if constexpr(std::same_as<base0, baseZ>) { return std::forward<OZ>(z); }
 				}()),
 				
 				base1( [&]() constexpr noexcept -> decltype(auto) {
-					if constexpr(std::same_as<base1, baseX>) return x;
-					if constexpr(std::same_as<base1, baseY>) return y;
-					if constexpr(std::same_as<base1, baseZ>) return z;
+					if constexpr(std::same_as<base1, baseX>) return std::forward<OX>(x);
+					if constexpr(std::same_as<base1, baseY>) return std::forward<OY>(y);
+					if constexpr(std::same_as<base1, baseZ>) return std::forward<OZ>(z);
 				}()),
 				
 				base2( [&]() constexpr noexcept -> decltype(auto) {
-					if constexpr(std::same_as<base2, baseX>) return x;
-					if constexpr(std::same_as<base2, baseY>) return y;
-					if constexpr(std::same_as<base2, baseZ>) return z;
+					if constexpr(std::same_as<base2, baseX>) return std::forward<OX>(x);
+					if constexpr(std::same_as<base2, baseY>) return std::forward<OY>(y);
+					if constexpr(std::same_as<base2, baseZ>) return std::forward<OZ>(z);
 				}()) {}
+			
+		};
+		
+		static constexpr auto MUL_AXIS_COMP = []<typename T, typename U>(T&& l, U&& r) constexpr -> decltype(auto) {
+			using Lhs = std::remove_cvref_t<T>;
+			using Rhs = std::remove_cvref_t<U>;
+			
+			if constexpr(std::same_as<Lhs, Noop> && std::same_as<Rhs, Noop>)
+			{ return nullptr; }
+			else if constexpr(!std::same_as<Lhs, Noop> && !std::same_as<Rhs, Noop>)
+			{ return l * r; }
+			else if constexpr(!std::same_as<Rhs, Noop>)
+			{ return r; }
+			else if constexpr(!std::same_as<Lhs, Noop>)
+			{ return l; }
 			
 		};
 		
@@ -248,6 +224,10 @@ namespace ink {
 		using ctrY = typename meta::value_type<XYZ::Y>;
 		using ctrZ = typename meta::value_type<XYZ::Z>;
 		
+		using typeX = decltype(baseX::x);
+		using typeY = decltype(baseY::y);
+		using typeZ = decltype(baseZ::z);
+		
 		/* Default constructor */
 		
 		public: constexpr
@@ -257,36 +237,32 @@ namespace ink {
 		: base() {}
 		
 		public: constexpr
-		Vec(tmp_ref_or_default<ctrX> auto&& x, tmp_ref_or_default<ctrY> auto&& y, tmp_ref_or_default<ctrZ> auto&& z)
+		Vec(ctrX const& x, ctrY const& y, ctrZ const& z)
 		noexcept(noexcept( base(x, y, z) ))
 		: base(x, y, z) {}
 		
-		public: template<typename OX, typename OY, typename OZ> constexpr
+		public: template<std::convertible_to<ctrX> OX, std::convertible_to<ctrY> OY, std::convertible_to<ctrZ> OZ>
+		constexpr
 		Vec(Vec<OX, OY, OZ> const& other)
-		noexcept(noexcept(base(other.x, other.y, other.z)))
-		: base(other.x, other.y, other.z) {}
-		
-		public: template<typename OX, typename OY, typename OZ> constexpr
-		Vec(Vec<OX, OY, OZ> && other)
-		noexcept(noexcept(base(other.x, other.y, other.z)))
-		: base(other.x, other.y, other.z) {}
+		noexcept(noexcept( base(static_cast<typeX>(other.x), static_cast<typeY>(other.y), static_cast<typeZ>(other.z)) ))
+		: base(static_cast<typeX>(other.x), static_cast<typeY>(other.y), static_cast<typeZ>(other.z)) {}
 		
 		
 		
 		public: constexpr
-		Vec(tmp_ref_or_default<ctrX> auto&& x, tmp_ref_or_default<ctrY> auto&& y)
+		Vec(ctrX const& x, ctrY const& y)
 		noexcept(noexcept( base(x, y, nullptr) ))
 		requires(std::same_as<Z, void> || std::default_initializable<baseZ>)
 		: base(x, y, nullptr) {}
 		
 		public: constexpr
-		Vec(tmp_ref_or_default<ctrX> auto&& x, tmp_ref_or_default<ctrZ> auto&& z)
+		Vec(ctrX const& x, ctrZ const& z)
 		noexcept(noexcept( base(x, nullptr, z) ))
 		requires(std::same_as<Y, void>)
 		: base(x, nullptr, z) {}
 		
 		public: constexpr
-		Vec(tmp_ref_or_default<ctrY> auto&& y, tmp_ref_or_default<ctrZ> auto&& z)
+		Vec(ctrY const& y, ctrZ const& z)
 		noexcept(noexcept( base(nullptr, y, z) ))
 		requires(std::same_as<X, void>)
 		: base(nullptr, y, z) {}
@@ -294,285 +270,58 @@ namespace ink {
 		
 		
 		public: constexpr explicit
-		Vec(tmp_ref_or_default<ctrX> auto&& x)
+		Vec(ctrX const& x)
 		noexcept(noexcept( base(x, nullptr, nullptr) ))
 		requires((std::same_as<void, Y> || std::default_initializable<baseY>) && (std::same_as<void, Z> || std::default_initializable<baseZ>))
 		: base(x, nullptr, nullptr) {}
 		
 		public: constexpr explicit
-		Vec(tmp_ref_or_default<ctrY> auto&& y)
+		Vec(ctrY const& y)
 		noexcept(noexcept( base(nullptr, y, nullptr) ))
 		requires(std::same_as<void, X> && (std::same_as<void, Z> && std::default_initializable<baseZ>))
 		: base(nullptr, y, nullptr) {}
 		
 		public: constexpr explicit
-		Vec(auto&& z)
+		Vec(ctrZ& z)
 		noexcept(noexcept( base(nullptr, nullptr, z) ))
 		requires(std::same_as<void, X> && std::same_as<void, Y>)
 		: base(nullptr, nullptr, z) {}
 		
 		
 		
-		public: friend constexpr decltype(auto)
-		operator+(temp_reference_to<Vec> auto&& v)
-		noexcept(noexcept( +v.x, +v.y, +v.z ))
-		requires requires(decltype(v) v)
-		{ {+v.x}; {+v.y}; {+v.z}; }
-		{
-			using detail::Noop;
-			
-			decltype(auto) x_out = +v.x;
-			decltype(auto) y_out = +v.y;
-			decltype(auto) z_out = +v.z;
-			
-			using rOX = decltype(x_out);
-			using rOY = decltype(y_out);
-			using rOZ = decltype(z_out);
-			
-			constexpr auto
-			xNoop = (std::same_as<Noop, rOX>),
-			yNoop = (std::same_as<Noop, rOY>),
-			zNoop = (std::same_as<Noop, rOZ>);
-			
-			using OX = std::conditional_t<(xNoop), void, rOX>;
-			using OY = std::conditional_t<(yNoop), void, rOY>;
-			using OZ = std::conditional_t<(zNoop), void, rOZ>;
-			
-			using OXArg = std::conditional_t<(xNoop), std::nullptr_t, rOX>;
-			using OYArg = std::conditional_t<(yNoop), std::nullptr_t, rOY>;
-			using OZArg = std::conditional_t<(zNoop), std::nullptr_t, rOZ>;
-			
-			return Vec<OX, OY, OZ> (
-				static_cast<OXArg>(x_out),
-				static_cast<OYArg>(y_out),
-				static_cast<OZArg>(z_out)
-			);
+		public: template<typename RVec>
+		requires (SameTemplate<RVec, Vec>) && requires(Vec const& lhs, RVec const& rhs) {
+			detail::MUL_AXIS_COMP(lhs.x, rhs.x);
+			detail::MUL_AXIS_COMP(lhs.y, rhs.y);
+			detail::MUL_AXIS_COMP(lhs.z, rhs.z);
 		}
-		
-		public: friend constexpr decltype(auto)
-		operator-(temp_reference_to<Vec> auto&& v)
-		noexcept(noexcept( -v.x, -v.y, -v.z ))
-		requires requires(decltype(v) v)
-		{ {-v.x}; {-v.y}; {-v.z}; }
-		{
-			using detail::Noop;
-			
-			decltype(auto) x_out = -v.x;
-			decltype(auto) y_out = -v.y;
-			decltype(auto) z_out = -v.z;
-			
-			using rOX = decltype(x_out);
-			using rOY = decltype(y_out);
-			using rOZ = decltype(z_out);
-			
-			constexpr auto
-			xNoop = (std::same_as<Noop, rOX>),
-			yNoop = (std::same_as<Noop, rOY>),
-			zNoop = (std::same_as<Noop, rOZ>);
-			
-			using OX = std::conditional_t<(xNoop), void, rOX>;
-			using OY = std::conditional_t<(yNoop), void, rOY>;
-			using OZ = std::conditional_t<(zNoop), void, rOZ>;
-			
-			using OXArg = std::conditional_t<(xNoop), std::nullptr_t, rOX>;
-			using OYArg = std::conditional_t<(yNoop), std::nullptr_t, rOY>;
-			using OZArg = std::conditional_t<(zNoop), std::nullptr_t, rOZ>;
-			
-			return Vec<OX, OY, OZ> (
-				static_cast<OXArg>(x_out),
-				static_cast<OYArg>(y_out),
-				static_cast<OZArg>(z_out)
-			);
-		}
-		
-		
-		
-		public: template<typename RX, typename RY, typename RZ>
 		friend constexpr decltype(auto)
-		operator+(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(noexcept( (lhs.x + rhs.x), (lhs.y + rhs.y), (lhs.z + rhs.z) ))
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs)
-		{ {lhs.x + rhs.x}; {lhs.y + rhs.y}; {lhs.z + rhs.z}; }
+		operator*(Vec const& lhs, RVec const& rhs)
 		{
-			using detail::Noop;
-			
-			decltype(auto) x_out = lhs.x + rhs.x;
-			decltype(auto) y_out = lhs.y + rhs.y;
-			decltype(auto) z_out = lhs.z + rhs.z;
-			
-			using rOX = decltype(x_out);
-			using rOY = decltype(y_out);
-			using rOZ = decltype(z_out);
-			
-			constexpr auto
-			xNoop = (std::same_as<Noop, rOX>),
-			yNoop = (std::same_as<Noop, rOY>),
-			zNoop = (std::same_as<Noop, rOZ>);
-			
-			using OX = std::conditional_t<(xNoop), void, rOX>;
-			using OY = std::conditional_t<(yNoop), void, rOY>;
-			using OZ = std::conditional_t<(zNoop), void, rOZ>;
-			
-			using OXArg = std::conditional_t<(xNoop), std::nullptr_t, rOX>;
-			using OYArg = std::conditional_t<(yNoop), std::nullptr_t, rOY>;
-			using OZArg = std::conditional_t<(zNoop), std::nullptr_t, rOZ>;
-			
-			return Vec<OX, OY, OZ> (
-				static_cast<OXArg>(x_out),
-				static_cast<OYArg>(y_out),
-				static_cast<OZArg>(z_out)
+			return ink::Vec(
+				detail::MUL_AXIS_COMP(lhs.x, rhs.x),
+				detail::MUL_AXIS_COMP(lhs.y, rhs.y),
+				detail::MUL_AXIS_COMP(lhs.z, rhs.z)
 			);
 		}
 		
-		public: template<typename RX, typename RY, typename RZ>
+		public: template<typename T>
+		requires (!SameTemplate<T, Vec>) && requires(Vec const& lhs, Vec<T, T, T>&& rhs)
+		{ {lhs * rhs}; }
 		friend constexpr decltype(auto)
-		operator-(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(noexcept( (lhs.x - rhs.x), (lhs.y - rhs.y), (lhs.z - rhs.z) ))
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs)
-		{ {lhs.x - rhs.x}; {lhs.y - rhs.y}; {lhs.z - rhs.z}; }
-		{
-			using detail::Noop;
-			
-			decltype(auto) x_out = lhs.x - rhs.x;
-			decltype(auto) y_out = lhs.y - rhs.y;
-			decltype(auto) z_out = lhs.z - rhs.z;
-			
-			using rOX = decltype(x_out);
-			using rOY = decltype(y_out);
-			using rOZ = decltype(z_out);
-			
-			constexpr auto
-			xNoop = (std::same_as<Noop, rOX>),
-			yNoop = (std::same_as<Noop, rOY>),
-			zNoop = (std::same_as<Noop, rOZ>);
-			
-			using OX = std::conditional_t<(xNoop), void, rOX>;
-			using OY = std::conditional_t<(yNoop), void, rOY>;
-			using OZ = std::conditional_t<(zNoop), void, rOZ>;
-			
-			using OXArg = std::conditional_t<(xNoop), std::nullptr_t, rOX>;
-			using OYArg = std::conditional_t<(yNoop), std::nullptr_t, rOY>;
-			using OZArg = std::conditional_t<(zNoop), std::nullptr_t, rOZ>;
-			
-			return Vec<OX, OY, OZ> (
-				static_cast<OXArg>(x_out),
-				static_cast<OYArg>(y_out),
-				static_cast<OZArg>(z_out)
-			);
-		}
+		operator*(Vec const& lhs, T const& rhs)
+		{ return ink::Vec(lhs * ink::Vec<T, T, T>(rhs, rhs, rhs)); }
 		
-		public: template<typename RX, typename RY, typename RZ>
+		public: template<typename T>
+		requires (!SameTemplate<T, Vec>) && requires(Vec<T, T, T> && lhs, Vec const& rhs)
+		{ {lhs * rhs}; }
 		friend constexpr decltype(auto)
-		operator*(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(noexcept( (lhs.x * rhs.x), (lhs.y * rhs.y), (lhs.z * rhs.z) ))
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs)
-		{ {lhs.x * rhs.x}; {lhs.y * rhs.y}; {lhs.z * rhs.z}; }
-		{
-			using detail::Noop;
-			
-			decltype(auto) x_out = lhs.x * rhs.x;
-			decltype(auto) y_out = lhs.y * rhs.y;
-			decltype(auto) z_out = lhs.z * rhs.z;
-			
-			using rOX = decltype(x_out);
-			using rOY = decltype(y_out);
-			using rOZ = decltype(z_out);
-			
-			constexpr auto
-			xNoop = (std::same_as<Noop, rOX>),
-			yNoop = (std::same_as<Noop, rOY>),
-			zNoop = (std::same_as<Noop, rOZ>);
-			
-			using OX = std::conditional_t<(xNoop), void, rOX>;
-			using OY = std::conditional_t<(yNoop), void, rOY>;
-			using OZ = std::conditional_t<(zNoop), void, rOZ>;
-			
-			using OXArg = std::conditional_t<(xNoop), std::nullptr_t, rOX>;
-			using OYArg = std::conditional_t<(yNoop), std::nullptr_t, rOY>;
-			using OZArg = std::conditional_t<(zNoop), std::nullptr_t, rOZ>;
-			
-			return Vec<OX, OY, OZ> (
-				static_cast<OXArg>(x_out),
-				static_cast<OYArg>(y_out),
-				static_cast<OZArg>(z_out)
-			);
-		}
-		
-		public: template<typename RX, typename RY, typename RZ>
-		friend constexpr decltype(auto)
-		operator/(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(noexcept( (lhs.x / rhs.x), (lhs.y / rhs.y), (lhs.z / rhs.z) ))
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs)
-		{ {lhs.x / rhs.x}; {lhs.y / rhs.y}; {lhs.z / rhs.z}; }
-		{
-			using detail::Noop;
-			
-			decltype(auto) x_out = lhs.x / rhs.x;
-			decltype(auto) y_out = lhs.y / rhs.y;
-			decltype(auto) z_out = lhs.z / rhs.z;
-			
-			using rOX = decltype(x_out);
-			using rOY = decltype(y_out);
-			using rOZ = decltype(z_out);
-			
-			constexpr auto
-			xNoop = (std::same_as<Noop, rOX>),
-			yNoop = (std::same_as<Noop, rOY>),
-			zNoop = (std::same_as<Noop, rOZ>);
-			
-			using OX = std::conditional_t<(xNoop), void, rOX>;
-			using OY = std::conditional_t<(yNoop), void, rOY>;
-			using OZ = std::conditional_t<(zNoop), void, rOZ>;
-			
-			using OXArg = std::conditional_t<(xNoop), std::nullptr_t, rOX>;
-			using OYArg = std::conditional_t<(yNoop), std::nullptr_t, rOY>;
-			using OZArg = std::conditional_t<(zNoop), std::nullptr_t, rOZ>;
-			
-			return Vec<OX, OY, OZ> (
-				static_cast<OXArg>(x_out),
-				static_cast<OYArg>(y_out),
-				static_cast<OZArg>(z_out)
-			);
-		}
-		
-		public: template<typename RX, typename RY, typename RZ>
-		friend constexpr decltype(auto)
-		operator%(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(noexcept( (lhs.x % rhs.x), (lhs.y % rhs.y), (lhs.z % rhs.z) ))
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs)
-		{ {lhs.x % rhs.x}; {lhs.y % rhs.y}; {lhs.z % rhs.z}; }
-		{
-			using detail::Noop;
-			
-			decltype(auto) x_out = lhs.x % rhs.x;
-			decltype(auto) y_out = lhs.y % rhs.y;
-			decltype(auto) z_out = lhs.z % rhs.z;
-			
-			using rOX = decltype(x_out);
-			using rOY = decltype(y_out);
-			using rOZ = decltype(z_out);
-			
-			constexpr auto
-			xNoop = (std::same_as<Noop, rOX>),
-			yNoop = (std::same_as<Noop, rOY>),
-			zNoop = (std::same_as<Noop, rOZ>);
-			
-			using OX = std::conditional_t<(xNoop), void, rOX>;
-			using OY = std::conditional_t<(yNoop), void, rOY>;
-			using OZ = std::conditional_t<(zNoop), void, rOZ>;
-			
-			using OXArg = std::conditional_t<(xNoop), std::nullptr_t, rOX>;
-			using OYArg = std::conditional_t<(yNoop), std::nullptr_t, rOY>;
-			using OZArg = std::conditional_t<(zNoop), std::nullptr_t, rOZ>;
-			
-			return Vec<OX, OY, OZ> (
-				static_cast<OXArg>(x_out),
-				static_cast<OYArg>(y_out),
-				static_cast<OZArg>(z_out)
-			);
-		}
+		operator*(T const& lhs, Vec const& rhs)
+		{ return ink::Vec(ink::Vec<T, T, T>(lhs, lhs, lhs) * rhs); }
 		
 	};
+	
+	
 	
 	template<typename X, typename Y, typename Z> Vec(X, Y, Z) -> Vec<X, Y, Z>;
 	Vec(std::nullptr_t, std::nullptr_t, std::nullptr_t) -> Vec<void, void, void>;
@@ -592,6 +341,12 @@ namespace ink {
 	template<typename X> Vec(X) -> Vec<X, void, void>;
 	
 	template<typename X, typename Y, typename Z> Vec(Vec<X, Y, Z>) -> Vec<std::remove_cvref_t<X>, std::remove_cvref_t<Y>, std::remove_cvref_t<Z>>;
+	
+}
+
+void test() {
+	
+	
 	
 }
 
