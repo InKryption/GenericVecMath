@@ -128,21 +128,6 @@ namespace ink {
 			public: template<size_t i>
 			using AxisAt = GetAxis< AxisAtIndex<i> >;
 			
-			public: template<Tag tag> static constexpr decltype(auto)
-			get_axis(auto&& v) noexcept {
-				switch(tag) {
-					case Tag::X:
-						if constexpr(is_void<Tag::X>) return nullptr;
-						else return v.x;
-					case Tag::Y:
-						if constexpr(is_void<Tag::Y>) return nullptr;
-						else return v.Y;
-					case Tag::Z:
-						if constexpr(is_void<Tag::Z>) return nullptr;
-						else return v.z;
-				}
-			}
-			
 			template<XYZ tag> static constexpr decltype(auto)
 			CONDITIONAL_AXIS_VALUE_OP(auto&& op, auto&& lhs, auto&& rhs) {
 				using detail::Noop;
