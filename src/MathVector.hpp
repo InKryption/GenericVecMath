@@ -310,7 +310,7 @@ namespace ink {
 		: base(nullptr, y, nullptr) {}
 		
 		public: constexpr explicit
-		Vec(ctrZ& z)
+		Vec(ctrZ const& z)
 		noexcept(noexcept( base(nullptr, nullptr, z) ))
 		requires(std::same_as<void, X> && std::same_as<void, Y>)
 		: base(nullptr, nullptr, z) {}
