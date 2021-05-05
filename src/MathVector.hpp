@@ -276,6 +276,11 @@ namespace ink {
 			return xyz;
 		}
 		
+		public: friend constexpr decltype(auto)
+		mag2(Vec const& v) {
+			return dot(v, v);
+		}
+		
 	};
 	
 	template<typename X, typename Y, typename Z> Vec(Vec<X,Y,Z>) -> Vec<X, Y, Z>;
