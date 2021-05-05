@@ -10,6 +10,53 @@
 
 namespace ink {
 	
+	namespace Ops {
+		#define DEF_LAMBDA_OP(name, vars, req_vars, expr)	\
+		static constexpr decltype(auto) name = [] vars constexpr noexcept(noexcept(expr)) requires requires req_vars { {expr}; } { return expr; };
+		
+		DEF_LAMBDA_OP(POSTFIX_INC, (auto&& v), (decltype(v) v), v++)
+		DEF_LAMBDA_OP(POSTFIX_DEC, (auto&& v), (decltype(v) v), v--)
+		
+		DEF_LAMBDA_OP(PREFIX_INC, (auto&& v), (decltype(v) v), ++v)
+		DEF_LAMBDA_OP(PREFIX_DEC, (auto&& v), (decltype(v) v), --v)
+		
+		DEF_LAMBDA_OP(BITWISE_NOT, (auto&& v), (decltype(v) v), ~v)
+		DEF_LAMBDA_OP(LOGICAL_NOT, (auto&& v), (decltype(v) v), !v)
+		
+		DEF_LAMBDA_OP(UNARY_ADD, (auto&& v), (decltype(v) v), +v)
+		DEF_LAMBDA_OP(UNARY_SUB, (auto&& v), (decltype(v) v), -v)
+		
+		DEF_LAMBDA_OP(MUL, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs * rhs)
+		DEF_LAMBDA_OP(DIV, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs / rhs)
+		DEF_LAMBDA_OP(MOD, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs % rhs)
+		
+		DEF_LAMBDA_OP(ADD, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs + rhs)
+		DEF_LAMBDA_OP(SUB, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs - rhs)
+		
+		DEF_LAMBDA_OP(SHL, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs << rhs)
+		DEF_LAMBDA_OP(SHR, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs >> rhs)
+		
+		DEF_LAMBDA_OP(CMP_SPACESHIP, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs <=> rhs)
+		
+		DEF_LAMBDA_OP(CMP_LT, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs < rhs)
+		DEF_LAMBDA_OP(CMP_GT, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs > rhs)
+		
+		DEF_LAMBDA_OP(CMP_LTEQ, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs <= rhs)
+		DEF_LAMBDA_OP(CMP_GTEQ, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs >= rhs)
+		
+		DEF_LAMBDA_OP(CMP_EQ, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs == rhs)
+		DEF_LAMBDA_OP(CMP_NEQ, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs != rhs)
+		
+		DEF_LAMBDA_OP(BITWISE_AND, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs & rhs)
+		DEF_LAMBDA_OP(BITWISE_XOR, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs ^ rhs)
+		DEF_LAMBDA_OP(BITWISE_OR, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs | rhs)
+		
+		DEF_LAMBDA_OP(LOGICAL_AND, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs && rhs)
+		DEF_LAMBDA_OP(LOGICAL_OR, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs), lhs || rhs)
+		
+		#undef DEF_LAMBDA_OP
+	}
+	
 	namespace detail {
 		
 		template<typename T, typename U>
@@ -42,7 +89,7 @@ namespace ink {
 		template<class T> struct Axis<T, XYZ::Z>
 		{ T z; constexpr Axis(auto&& z): z(z) {} constexpr Axis(std::nullptr_t = {}) requires(std::default_initializable<T>): z() {} };
 		
-		struct Empty {};
+		struct Empty { constexpr Empty() {} };
 		
 		template<> struct Axis<void, XYZ::X> { constexpr Axis(std::nullptr_t = {}) {} static constexpr Empty x{}; };
 		template<> struct Axis<void, XYZ::Y> { constexpr Axis(std::nullptr_t = {}) {} static constexpr Empty y{}; };
@@ -133,7 +180,7 @@ namespace ink {
 			
 		};
 		
-		template<auto Op, bool PreferVoid = false>
+		template<auto Op, bool PreferVoid = false, typename If_Void = std::nullptr_t>
 		static constexpr decltype(auto)
 		binary_op(auto&& lhs, auto&& rhs) {
 			using Lhs = std::remove_cvref_t<decltype(lhs)>;
@@ -144,7 +191,7 @@ namespace ink {
 				rEmpty = std::same_as<detail::Empty, Rhs>;
 			
 			if constexpr(		(lEmpty && rEmpty)
-			|| (PreferVoid &&	(lEmpty || rEmpty)))	{ return nullptr; }
+			|| (PreferVoid &&	(lEmpty || rEmpty)))	{ return If_Void(); }
 			else if constexpr(!lEmpty && !rEmpty)		{ return Op(lhs, rhs); }
 			else if constexpr(!lEmpty)					{ return lhs; }
 			else if constexpr(!rEmpty)					{ return rhs; }
@@ -213,7 +260,22 @@ namespace ink {
 		noexcept( noexcept(base(nullptr, nullptr, z)) )
 		requires( std::is_void_v<X> && std::is_void_v<Y> && !std::is_void_v<Z> )
 		: base(nullptr, nullptr, z) {}
-		 
+		
+		
+		
+		public: template<typename OX, typename OY, typename OZ>
+		friend constexpr decltype(auto)
+		dot(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
+			const decltype(auto) x = detail::binary_op<Ops::MUL, false, detail::Empty>(lhs.x, rhs.x);
+			const decltype(auto) y = detail::binary_op<Ops::MUL, false, detail::Empty>(lhs.y, rhs.y);
+			const decltype(auto) z = detail::binary_op<Ops::MUL, false, detail::Empty>(lhs.z, rhs.z);
+			
+			const decltype(auto) xy = detail::binary_op<Ops::ADD>(x, y);
+			const auto xyz = detail::binary_op<Ops::ADD>(xy, z);
+			
+			return xyz;
+		}
+		
 	};
 	
 	template<typename X, typename Y, typename Z> Vec(Vec<X,Y,Z>) -> Vec<X, Y, Z>;
@@ -238,36 +300,30 @@ namespace ink {
 		template<typename X, typename Y, typename Z, typename OX, typename OY, typename OZ>
 		static constexpr decltype(auto)
 		operator*(Vec<X, Y, Z> const& lhs, Vec<OX, OY, OZ> const& rhs) {
-			constexpr decltype(auto) mul =
-			[](auto&& lhs, auto&& rhs) constexpr { return lhs * rhs; };
 			return ink::Vec(
-				detail::binary_op<mul>(lhs.x, rhs.x),
-				detail::binary_op<mul>(lhs.y, rhs.y),
-				detail::binary_op<mul>(lhs.z, rhs.z)
+				detail::binary_op<Ops::MUL>(lhs.x, rhs.x),
+				detail::binary_op<Ops::MUL>(lhs.y, rhs.y),
+				detail::binary_op<Ops::MUL>(lhs.z, rhs.z)
 			);
 		}
 		
 		template<typename X, typename Y, typename Z, typename T>
 		static constexpr decltype(auto)
 		operator*(Vec<X, Y, Z> const& lhs, T const& rhs) {
-			constexpr decltype(auto) mul =
-			[](auto&& lhs, auto&& rhs) constexpr { return lhs * rhs; };
 			return ink::Vec(
-				detail::binary_op<mul, true>(lhs.x, rhs),
-				detail::binary_op<mul, true>(lhs.y, rhs),
-				detail::binary_op<mul, true>(lhs.z, rhs)
+				detail::binary_op<Ops::MUL, true>(lhs.x, rhs),
+				detail::binary_op<Ops::MUL, true>(lhs.y, rhs),
+				detail::binary_op<Ops::MUL, true>(lhs.z, rhs)
 			);
 		}
 		
 		template<typename X, typename Y, typename Z, typename T>
 		static constexpr decltype(auto)
 		operator*(T const& lhs, Vec<X, Y, Z> const& rhs) {
-			constexpr decltype(auto) mul =
-			[](auto&& lhs, auto&& rhs) constexpr { return lhs * rhs; };
 			return ink::Vec(
-				detail::binary_op<mul, true>(lhs, rhs.x),
-				detail::binary_op<mul, true>(lhs, rhs.y),
-				detail::binary_op<mul, true>(lhs, rhs.z)
+				detail::binary_op<Ops::MUL, true>(lhs, rhs.x),
+				detail::binary_op<Ops::MUL, true>(lhs, rhs.y),
+				detail::binary_op<Ops::MUL, true>(lhs, rhs.z)
 			);
 		}
 		
@@ -276,36 +332,30 @@ namespace ink {
 		template<typename X, typename Y, typename Z, typename OX, typename OY, typename OZ>
 		static constexpr decltype(auto)
 		operator/(Vec<X, Y, Z> const& lhs, Vec<OX, OY, OZ> const& rhs) {
-			constexpr decltype(auto) div =
-			[](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
 			return ink::Vec(
-				detail::binary_op<div>(lhs.x, rhs.x),
-				detail::binary_op<div>(lhs.y, rhs.y),
-				detail::binary_op<div>(lhs.z, rhs.z)
+				detail::binary_op<Ops::DIV>(lhs.x, rhs.x),
+				detail::binary_op<Ops::DIV>(lhs.y, rhs.y),
+				detail::binary_op<Ops::DIV>(lhs.z, rhs.z)
 			);
 		}
 		
 		template<typename X, typename Y, typename Z, typename T>
 		static constexpr decltype(auto)
 		operator/(Vec<X, Y, Z> const& lhs, T const& rhs) {
-			constexpr decltype(auto) div =
-			[](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
 			return ink::Vec(
-				detail::binary_op<div, true>(lhs.x, rhs),
-				detail::binary_op<div, true>(lhs.y, rhs),
-				detail::binary_op<div, true>(lhs.z, rhs)
+				detail::binary_op<Ops::DIV, true>(lhs.x, rhs),
+				detail::binary_op<Ops::DIV, true>(lhs.y, rhs),
+				detail::binary_op<Ops::DIV, true>(lhs.z, rhs)
 			);
 		}
 		
 		template<typename X, typename Y, typename Z, typename T>
 		static constexpr decltype(auto)
 		operator/(T const& lhs, Vec<X, Y, Z> const& rhs) {
-			constexpr decltype(auto) div =
-			[](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
 			return ink::Vec(
-				detail::binary_op<div, true>(lhs, rhs.x),
-				detail::binary_op<div, true>(lhs, rhs.y),
-				detail::binary_op<div, true>(lhs, rhs.z)
+				detail::binary_op<Ops::DIV, true>(lhs, rhs.x),
+				detail::binary_op<Ops::DIV, true>(lhs, rhs.y),
+				detail::binary_op<Ops::DIV, true>(lhs, rhs.z)
 			);
 		}
 		
@@ -317,33 +367,29 @@ namespace ink {
 			constexpr decltype(auto) mod =
 			[](auto&& lhs, auto&& rhs) constexpr { return lhs % rhs; };
 			return ink::Vec(
-				detail::binary_op<mod>(lhs.x, rhs.x),
-				detail::binary_op<mod>(lhs.y, rhs.y),
-				detail::binary_op<mod>(lhs.z, rhs.z)
+				detail::binary_op<Ops::MOD>(lhs.x, rhs.x),
+				detail::binary_op<Ops::MOD>(lhs.y, rhs.y),
+				detail::binary_op<Ops::MOD>(lhs.z, rhs.z)
 			);
 		}
 		
 		template<typename X, typename Y, typename Z, typename T> requires(!SameTemplate<T, Vec<void>>)
 		static constexpr decltype(auto)
 		operator%(Vec<X, Y, Z> const& lhs, T const& rhs) {
-			constexpr decltype(auto) mod =
-			[](auto&& lhs, auto&& rhs) constexpr { return lhs % rhs; };
 			return ink::Vec(
-				detail::binary_op<mod, true>(lhs.x, rhs),
-				detail::binary_op<mod, true>(lhs.y, rhs),
-				detail::binary_op<mod, true>(lhs.z, rhs)
+				detail::binary_op<Ops::MOD, true>(lhs.x, rhs),
+				detail::binary_op<Ops::MOD, true>(lhs.y, rhs),
+				detail::binary_op<Ops::MOD, true>(lhs.z, rhs)
 			);
 		}
 		
 		template<typename X, typename Y, typename Z, typename T> requires(!SameTemplate<T, Vec<void>>)
 		static constexpr decltype(auto)
 		operator%(T const& lhs, Vec<X, Y, Z> const& rhs) {
-			constexpr decltype(auto) mod =
-			[](auto&& lhs, auto&& rhs) constexpr { return lhs % rhs; };
 			return ink::Vec(
-				detail::binary_op<mod, true>(lhs, rhs.x),
-				detail::binary_op<mod, true>(lhs, rhs.y),
-				detail::binary_op<mod, true>(lhs, rhs.z)
+				detail::binary_op<Ops::MOD, true>(lhs, rhs.x),
+				detail::binary_op<Ops::MOD, true>(lhs, rhs.y),
+				detail::binary_op<Ops::MOD, true>(lhs, rhs.z)
 			);
 		}
 		
@@ -352,24 +398,20 @@ namespace ink {
 		template<typename X, typename Y, typename Z, typename OX, typename OY, typename OZ>
 		static constexpr decltype(auto)
 		operator+(Vec<X, Y, Z> const& lhs, Vec<OX, OY, OZ> const& rhs) {
-			constexpr decltype(auto) add =
-			[](auto&& lhs, auto&& rhs) constexpr { return lhs + rhs; };
 			return ink::Vec(
-				detail::binary_op<add>(lhs.x, rhs.x),
-				detail::binary_op<add>(lhs.y, rhs.y),
-				detail::binary_op<add>(lhs.z, rhs.z)
+				detail::binary_op<Ops::ADD>(lhs.x, rhs.x),
+				detail::binary_op<Ops::ADD>(lhs.y, rhs.y),
+				detail::binary_op<Ops::ADD>(lhs.z, rhs.z)
 			);
 		}
 		
 		template<typename X, typename Y, typename Z>
 		static constexpr decltype(auto)
 		operator+(Vec<X, Y, Z> const& vec) {
-			constexpr decltype(auto) plus =
-			[](auto&& v) constexpr { return +v; };
 			return ink::Vec(
-				detail::unary_op<plus>(vec.x),
-				detail::unary_op<plus>(vec.y),
-				detail::unary_op<plus>(vec.z)
+				detail::unary_op<Ops::UNARY_ADD>(vec.x),
+				detail::unary_op<Ops::UNARY_ADD>(vec.y),
+				detail::unary_op<Ops::UNARY_ADD>(vec.z)
 			);
 		}
 		
@@ -378,24 +420,20 @@ namespace ink {
 		template<typename X, typename Y, typename Z, typename OX, typename OY, typename OZ>
 		static constexpr decltype(auto)
 		operator-(Vec<X, Y, Z> const& lhs, Vec<OX, OY, OZ> const& rhs) {
-			constexpr decltype(auto) sub =
-			[](auto&& lhs, auto&& rhs) constexpr { return lhs - rhs; };
 			return ink::Vec(
-				detail::binary_op<sub>(lhs.x, rhs.x),
-				detail::binary_op<sub>(lhs.y, rhs.y),
-				detail::binary_op<sub>(lhs.z, rhs.z)
+				detail::binary_op<Ops::SUB>(lhs.x, rhs.x),
+				detail::binary_op<Ops::SUB>(lhs.y, rhs.y),
+				detail::binary_op<Ops::SUB>(lhs.z, rhs.z)
 			);
 		}
 		
 		template<typename X, typename Y, typename Z>
 		static constexpr decltype(auto)
 		operator-(Vec<X, Y, Z> const& vec) {
-			constexpr decltype(auto) minus =
-			[](auto&& v) constexpr { return -v; };
 			return ink::Vec(
-				detail::unary_op<minus>(vec.x),
-				detail::unary_op<minus>(vec.y),
-				detail::unary_op<minus>(vec.z)
+				detail::unary_op<Ops::UNARY_SUB>(vec.x),
+				detail::unary_op<Ops::UNARY_SUB>(vec.y),
+				detail::unary_op<Ops::UNARY_SUB>(vec.z)
 			);
 		}
 		
