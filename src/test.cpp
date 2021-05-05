@@ -158,26 +158,7 @@ namespace ink {
 		
 	}
 	
-	template<typename X = void, typename Y = X, typename Z = void> class Vec;
-	
-	template<typename X, typename Y, typename Z> Vec(Vec<X,Y,Z>) -> Vec<X, Y, Z>;
-	
-	Vec() -> Vec<void, void, void>;
-	template<typename X, typename Y, typename Z> Vec(X, Y, Z) -> Vec<
-		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
-		std::conditional_t<(std::same_as<Y, std::nullptr_t>), void, Y>,
-		std::conditional_t<(std::same_as<Z, std::nullptr_t>), void, Z>	>;
-	
-	template<typename X, typename Y> Vec(X, Y) -> Vec<
-		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
-		std::conditional_t<(std::same_as<Y, std::nullptr_t>), void, Y>,
-		void	>;
-	
-	template<typename X> Vec(X) -> Vec<
-		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
-		void, void	>;
-		
-	template<typename X, typename Y, typename Z>
+	template<typename X, typename Y = X, typename Z = void>
 	class Vec: public detail::AxisGroup<X, Y, Z>::VecBase {
 		
 		private: using XYZ = detail::XYZ;
@@ -394,6 +375,23 @@ namespace ink {
 		}
 		
 	};
+	
+	template<typename X, typename Y, typename Z> Vec(Vec<X,Y,Z>) -> Vec<X, Y, Z>;
+	
+	Vec() -> Vec<void, void, void>;
+	template<typename X, typename Y, typename Z> Vec(X, Y, Z) -> Vec<
+		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
+		std::conditional_t<(std::same_as<Y, std::nullptr_t>), void, Y>,
+		std::conditional_t<(std::same_as<Z, std::nullptr_t>), void, Z>	>;
+	
+	template<typename X, typename Y> Vec(X, Y) -> Vec<
+		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
+		std::conditional_t<(std::same_as<Y, std::nullptr_t>), void, Y>,
+		void	>;
+	
+	template<typename X> Vec(X) -> Vec<
+		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
+		void, void	>;
 	
 	static constexpr decltype(auto)
 	fmod(auto&& lhs, auto&& rhs) requires(!SameTemplate<Vec<void>,decltype(lhs)> && !SameTemplate<Vec<void>,decltype(rhs)>)
