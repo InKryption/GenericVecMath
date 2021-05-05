@@ -401,73 +401,40 @@ namespace ink {
 	
 	static constexpr decltype(auto)
 	fmod(SameTemplate<Vec<void>> auto&& lhs, SameTemplate<Vec<void>> auto&& rhs) {
-		if constexpr(
-				std::floating_point<decltype(rhs.x)>
-			||	std::floating_point<decltype(rhs.y)>
-			||	std::floating_point<decltype(rhs.x)>
-			||	std::floating_point<decltype(lhs.x)>
-			||	std::floating_point<decltype(lhs.y)>
-			||	std::floating_point<decltype(lhs.z)>
-		) {
-			constexpr decltype(auto) mod =
-			[](auto&& lhs, auto&& rhs) constexpr
-			{ return lhs - (rhs * static_cast<size_t>(lhs/rhs)); };
-			return ink::Vec(
-				detail::binary_op<mod>(lhs.x, rhs.x),
-				detail::binary_op<mod>(lhs.y, rhs.y),
-				detail::binary_op<mod>(lhs.z, rhs.z)
-			);
-		}
-		else
-		{ return lhs % rhs; }
-		
+		constexpr decltype(auto) mod =
+		[](auto&& lhs, auto&& rhs) constexpr
+		{ return lhs - (rhs * static_cast<size_t>(lhs/rhs)); };
+		return ink::Vec(
+			detail::binary_op<mod>(lhs.x, rhs.x),
+			detail::binary_op<mod>(lhs.y, rhs.y),
+			detail::binary_op<mod>(lhs.z, rhs.z)
+		);
 	}
 	
 	template<typename T> requires(!SameTemplate<T, Vec<void>>)
 	static constexpr decltype(auto)
 	fmod(SameTemplate<Vec<void>> auto&& lhs, T const& rhs) {
-		
-		if constexpr(
-				std::floating_point<T>
-			||	std::floating_point<decltype(lhs.x)>
-			||	std::floating_point<decltype(lhs.y)>
-			||	std::floating_point<decltype(lhs.z)>
-		) {
-			constexpr decltype(auto) mod =
-			[](auto&& lhs, auto&& rhs) constexpr
-			{ return lhs - (rhs * static_cast<size_t>(lhs/rhs)); };
-			return ink::Vec(
-				detail::binary_op<mod, true>(lhs.x, rhs),
-				detail::binary_op<mod, true>(lhs.y, rhs),
-				detail::binary_op<mod, true>(lhs.z, rhs)
-			);
-		}
-		else
-		{ return lhs % rhs; }
-		
+		constexpr decltype(auto) mod =
+		[](auto&& lhs, auto&& rhs) constexpr
+		{ return lhs - (rhs * static_cast<size_t>(lhs/rhs)); };
+		return ink::Vec(
+			detail::binary_op<mod, true>(lhs.x, rhs),
+			detail::binary_op<mod, true>(lhs.y, rhs),
+			detail::binary_op<mod, true>(lhs.z, rhs)
+		);
 	}
 	
 	template<typename T> requires(!SameTemplate<T, Vec<void>>)
 	static constexpr decltype(auto)
 	fmod(T const& lhs, SameTemplate<Vec<void>> auto&& rhs) {
-		if constexpr(
-				std::floating_point<T>
-			||	std::floating_point<decltype(rhs.x)>
-			||	std::floating_point<decltype(rhs.y)>
-			||	std::floating_point<decltype(rhs.z)>
-		) {
-			constexpr decltype(auto) mod =
-			[](auto&& lhs, auto&& rhs) constexpr
-			{ return lhs - (rhs * static_cast<size_t>(lhs/rhs)); };
-			return ink::Vec(
-				detail::binary_op<mod, true>(lhs, rhs.x),
-				detail::binary_op<mod, true>(lhs, rhs.y),
-				detail::binary_op<mod, true>(lhs, rhs.z)
-			);
-		}
-		else
-		{ return lhs % rhs; }
-		
+		constexpr decltype(auto) mod =
+		[](auto&& lhs, auto&& rhs) constexpr
+		{ return lhs - (rhs * static_cast<size_t>(lhs/rhs)); };
+		return ink::Vec(
+			detail::binary_op<mod, true>(lhs, rhs.x),
+			detail::binary_op<mod, true>(lhs, rhs.y),
+			detail::binary_op<mod, true>(lhs, rhs.z)
+		);
 	}
 	
 }
@@ -476,9 +443,5 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
 	constexpr ink::Vec vec1(2.5, 7.5);
 	constexpr ink::Vec vec2(3, 5, 55);
-	
-	vec1.z;
-	
-	printf("%f %f %f\n", b.x, b.y, ink::fmod(7.5, 2));
 	
 }
