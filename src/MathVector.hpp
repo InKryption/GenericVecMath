@@ -42,6 +42,8 @@ namespace ink {
 	template<typename T, auto Else = sizeof(char)>
 	static constexpr auto SizeofWVoid = detail::SizeofWVoid_t<T, Else>::value;
 	
+	template<typename X, typename Y, typename Z> class Vec;
+	
 	namespace detail {
 		
 		struct Noop
@@ -128,67 +130,53 @@ namespace ink {
 			public: template<size_t i>
 			using AxisAt = GetAxis< AxisAtIndex<i> >;
 			
-			template<XYZ tag> static constexpr decltype(auto)
-			CONDITIONAL_AXIS_VALUE_OP(auto&& op, auto&& lhs, auto&& rhs) {
-				using detail::Noop;
+			template<typename RX, typename RY, typename RZ> static constexpr decltype(auto)
+			OperateVecs(auto&& Op, Vec<X, Y, Z> const& lhs, Vec<RX, RY, RZ> const& rhs) {
+				constexpr auto GetProperValue = [](auto&& Op, auto&& l, auto&& r) constexpr {
+					using lT = std::remove_cvref_t<decltype(l)>;
+					using rT = std::remove_cvref_t<decltype(r)>;
+					if		constexpr(std::same_as<Noop, lT> && std::same_as<Noop, rT>)		return nullptr;
+					else if	constexpr(!std::same_as<Noop, lT> && !std::same_as<Noop, rT>)	return Op(l, r);
+					else if	constexpr(!std::same_as<Noop, lT>) return l;
+					else if	constexpr(!std::same_as<Noop, rT>) return r;
+				};
 				
-				auto&& [l, r] = [&]() constexpr {
-					if		constexpr(tag == XYZ::X)	return std::tie(lhs.x, rhs.x);
-					else if	constexpr(tag == XYZ::Y)	return std::tie(lhs.y, rhs.y);
-					else if	constexpr(tag == XYZ::Z)	return std::tie(lhs.z, rhs.z);
-				}();
-				
-				using Lhs = std::remove_cvref_t<decltype(l)>;
-				using Rhs = std::remove_cvref_t<decltype(r)>;
-				
-				constexpr bool
-				lnoop = std::same_as<Lhs, Noop>,
-				rnoop = std::same_as<Rhs, Noop>;
-				
-				if		constexpr(!lnoop && !rnoop)	return op(l, r);
-				else if	constexpr( lnoop &&  rnoop)	return nullptr;
-				else if	constexpr(!rnoop)			return r;
-				else if	constexpr(!lnoop)			return l;
-				
+				return ink::Vec( GetProperValue(Op, lhs.x, rhs.x), GetProperValue(Op, lhs.y, rhs.y), GetProperValue(Op, lhs.z, rhs.z) );
 			}
 			
-			template<XYZ tag, typename T> static constexpr decltype(auto)
-			CONDITIONAL_SCALAR_OP_SCALE_RIGHT(auto&& op, auto&& lhs, T&& scalar) {
-				auto&& l = [&]() constexpr {
-					if		constexpr(tag == XYZ::X)	return lhs.x;
-					else if	constexpr(tag == XYZ::Y)	return lhs.y;
-					else if	constexpr(tag == XYZ::Z)	return lhs.z;
-				}();
+			template<typename T> static constexpr decltype(auto)
+			OperateScalarRight(auto&& Op, Vec<X, Y, Z> const& lhs, T const& rhs) {
+				constexpr auto GetProperValue = [](auto&& Op, auto&& l, auto&& r) constexpr {
+					using lT = std::remove_cvref_t<decltype(l)>;
+					using rT = std::remove_cvref_t<decltype(r)>;
+					if constexpr(std::same_as<lT, Noop> || std::same_as<rT, Noop>) return nullptr;
+					else return Op(l, r);
+				};
 				
-				if constexpr(std::same_as<std::remove_cvref_t<decltype(l)>, Noop>) return nullptr;
-				else return op(l, std::forward<T>(scalar));
+				return ink::Vec( GetProperValue(Op, lhs.x, rhs), GetProperValue(Op, lhs.y, rhs), GetProperValue(Op, lhs.z, rhs) );
 			}
 			
-			template<XYZ tag, typename T> static constexpr decltype(auto)
-			CONDITIONAL_SCALAR_OP_SCALE_LEFT(auto&& op, T&& scalar, auto&& rhs) {
+			template<typename T> static constexpr decltype(auto)
+			OperateScalarLeft(auto&& Op, T const& lhs, Vec<X, Y, Z> const& rhs) {
+				constexpr auto GetProperValue = [](auto&& Op, auto&& l, auto&& r) constexpr {
+					using lT = std::remove_cvref_t<decltype(l)>;
+					using rT = std::remove_cvref_t<decltype(r)>;
+					if constexpr(std::same_as<lT, Noop> || std::same_as<rT, Noop>) return nullptr;
+					else return Op(l, r);
+				};
 				
-				auto&& r = [&]() constexpr {
-					if		constexpr(tag == XYZ::X)	return rhs.x;
-					else if	constexpr(tag == XYZ::Y)	return rhs.y;
-					else if	constexpr(tag == XYZ::Z)	return rhs.z;
-				}();
-				
-				if constexpr(std::same_as<std::remove_cvref_t<decltype(r)>, Noop>) return nullptr;
-				else return op(std::forward<T>(scalar), r);
+				return ink::Vec( GetProperValue(Op, lhs, rhs.x), GetProperValue(Op, lhs, rhs.y), GetProperValue(Op, lhs, rhs.z) );
 			}
 			
-			template<XYZ tag> static constexpr decltype(auto)
-			CONDITIONAL_UNARY_OP(auto&& op, auto&& vec) {
+			static constexpr decltype(auto)
+			OperateUnary(auto&& Op, Vec<X, Y, Z> const& vec) {
+				constexpr auto GetProperValue = [](auto&& Op, auto&& v) constexpr {
+					using T = std::remove_cvref_t<decltype(v)>;
+					if constexpr(std::same_as<T, Noop>) return nullptr;
+					else return Op(v);
+				};
 				
-				auto&& val = [&]() constexpr {
-					if		constexpr(tag == XYZ::X) return vec.x;
-					else if	constexpr(tag == XYZ::Y) return vec.y;
-					else if	constexpr(tag == XYZ::Z) return vec.z;
-				}();
-				
-				if constexpr(std::same_as<std::remove_cvref_t<decltype(val)>, Noop>) return nullptr;
-				else return op(val);
-				
+				return ink::Vec( GetProperValue(Op, vec.x), GetProperValue(Op, vec.y), GetProperValue(Op, vec.z) );
 			}
 			
 		};
@@ -335,12 +323,7 @@ namespace ink {
 		operator*(Vec const& lhs, RVec const& rhs)
 		{
 			constexpr auto lambda = [](auto&& l, auto&& r) constexpr { return l * r; };
-			
-			decltype(auto) x_out = meta::template CONDITIONAL_AXIS_VALUE_OP<XYZ::X>(lambda, lhs, rhs);
-			decltype(auto) y_out = meta::template CONDITIONAL_AXIS_VALUE_OP<XYZ::Y>(lambda, lhs, rhs);
-			decltype(auto) z_out = meta::template CONDITIONAL_AXIS_VALUE_OP<XYZ::Z>(lambda, lhs, rhs);
-			
-			return ink::Vec(x_out, y_out, z_out);
+			return meta::OperateVecs(lambda, lhs, rhs);
 		}
 		
 		public: template<typename T>
@@ -349,12 +332,7 @@ namespace ink {
 		operator*(Vec const& lhs, T const& rhs)
 		{
 			constexpr auto lambda = [](auto&& l, auto&& r) constexpr { return l * r; };
-			
-			decltype(auto) x_out = meta::template CONDITIONAL_SCALAR_OP_SCALE_RIGHT<XYZ::X>(lambda, lhs, rhs);
-			decltype(auto) y_out = meta::template CONDITIONAL_SCALAR_OP_SCALE_RIGHT<XYZ::Y>(lambda, lhs, rhs);
-			decltype(auto) z_out = meta::template CONDITIONAL_SCALAR_OP_SCALE_RIGHT<XYZ::Z>(lambda, lhs, rhs);
-			
-			return ink::Vec(x_out, y_out, z_out);
+			return meta::OperateScalarRight(lambda, lhs, rhs);
 		}
 		
 		public: template<typename T>
@@ -363,12 +341,7 @@ namespace ink {
 		operator*(T const& lhs, Vec const& rhs)
 		{
 			constexpr auto lambda = [](auto&& l, auto&& r) constexpr { return l * r; };
-			
-			decltype(auto) x_out = meta::template CONDITIONAL_SCALAR_OP_SCALE_LEFT<XYZ::X>(lambda, lhs, rhs);
-			decltype(auto) y_out = meta::template CONDITIONAL_SCALAR_OP_SCALE_LEFT<XYZ::Y>(lambda, lhs, rhs);
-			decltype(auto) z_out = meta::template CONDITIONAL_SCALAR_OP_SCALE_LEFT<XYZ::Z>(lambda, lhs, rhs);
-			
-			return ink::Vec(x_out, y_out, z_out);
+			return meta::OperateScalarLeft(lambda, lhs, rhs);
 		}
 		
 		
@@ -378,11 +351,8 @@ namespace ink {
 		friend constexpr decltype(auto)
 		operator/(Vec const& lhs, RVec const& rhs)
 		{
-			return ink::Vec(
-				meta::template CONDITIONAL_AXIS_VALUE_OP<XYZ::X>([](auto&& lhs, auto&& rhs) { return lhs / rhs; }, lhs, rhs),
-				meta::template CONDITIONAL_AXIS_VALUE_OP<XYZ::Y>([](auto&& lhs, auto&& rhs) { return lhs / rhs; }, lhs, rhs),
-				meta::template CONDITIONAL_AXIS_VALUE_OP<XYZ::Z>([](auto&& lhs, auto&& rhs) { return lhs / rhs; }, lhs, rhs)
-			);
+			constexpr auto lambda = [](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
+			return meta::OperateVecs(lambda, lhs, rhs);
 		}
 		
 		public: template<typename T>
@@ -390,13 +360,8 @@ namespace ink {
 		friend constexpr decltype(auto)
 		operator/(Vec const& lhs, T const& rhs)
 		{
-			decltype(auto) rhs_vec = ink::Vec(
-				[&]() constexpr { if constexpr(std::same_as<void, X>) { return nullptr; } else { return rhs; } }(),
-				[&]() constexpr { if constexpr(std::same_as<void, Y>) { return nullptr; } else { return rhs; } }(),
-				[&]() constexpr { if constexpr(std::same_as<void, Z>) { return nullptr; } else { return rhs; } }()
-			);
-			
-			return ink::Vec(lhs / rhs_vec);
+			constexpr auto lambda = [](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
+			return meta::OperateScalarRight(lambda, lhs, rhs);
 		}
 		
 		public: template<typename T>
@@ -404,15 +369,8 @@ namespace ink {
 		friend constexpr decltype(auto)
 		operator/(T const& lhs, Vec const& rhs)
 		{
-			
-			
-			decltype(auto) lhs_vec = ink::Vec(
-				[&]() constexpr { if constexpr(std::same_as<void, X>) { return nullptr; } else { return lhs; } }(),
-				[&]() constexpr { if constexpr(std::same_as<void, Y>) { return nullptr; } else { return lhs; } }(),
-				[&]() constexpr { if constexpr(std::same_as<void, Z>) { return nullptr; } else { return lhs; } }()
-			);
-			
-			return ink::Vec(lhs_vec / rhs);
+			constexpr auto lambda = [](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
+			return meta::OperateScalarLeft(lambda, lhs, rhs);
 		}
 		
 		
@@ -423,24 +381,14 @@ namespace ink {
 		operator+(Vec const& lhs, RVec const& rhs)
 		{
 			constexpr auto lambda = [](auto&& l, auto&& r) constexpr { return l + r; };
-			
-			decltype(auto) x_out = meta::template CONDITIONAL_AXIS_VALUE_OP<XYZ::X>(lambda, lhs, rhs);
-			decltype(auto) y_out = meta::template CONDITIONAL_AXIS_VALUE_OP<XYZ::Y>(lambda, lhs, rhs);
-			decltype(auto) z_out = meta::template CONDITIONAL_AXIS_VALUE_OP<XYZ::Z>(lambda, lhs, rhs);
-			
-			return ink::Vec(x_out, y_out, z_out);
+			return meta::OperateVecs(lambda, lhs, rhs);
 		}
 		
 		public: friend constexpr decltype(auto)
 		operator+(Vec const& v)
 		{
 			constexpr auto lambda = [](auto&& v) constexpr { return +v; };
-			
-			decltype(auto) x_out = meta::template CONDITIONAL_UNARY_OP<XYZ::X>(lambda, v);
-			decltype(auto) y_out = meta::template CONDITIONAL_UNARY_OP<XYZ::Y>(lambda, v);
-			decltype(auto) z_out = meta::template CONDITIONAL_UNARY_OP<XYZ::Z>(lambda, v);
-			
-			return ink::Vec(x_out, y_out, z_out);
+			return meta::OperateUnary(lambda, v);
 		}
 		
 		
@@ -451,24 +399,14 @@ namespace ink {
 		operator-(Vec const& lhs, RVec const& rhs)
 		{
 			constexpr auto lambda = [](auto&& l, auto&& r) constexpr { return l - r; };
-			
-			decltype(auto) x_out = meta::template CONDITIONAL_AXIS_VALUE_OP<XYZ::X>(lambda, lhs, rhs);
-			decltype(auto) y_out = meta::template CONDITIONAL_AXIS_VALUE_OP<XYZ::Y>(lambda, lhs, rhs);
-			decltype(auto) z_out = meta::template CONDITIONAL_AXIS_VALUE_OP<XYZ::Z>(lambda, lhs, rhs);
-			
-			return ink::Vec(x_out, y_out, z_out);
+			return meta::OperateVecs(lambda, lhs, rhs);
 		}
 		
 		public: friend constexpr decltype(auto)
 		operator-(Vec const& v)
 		{
 			constexpr auto lambda = [](auto&& v) constexpr { return -v; };
-			
-			decltype(auto) x_out = meta::template CONDITIONAL_UNARY_OP<XYZ::X>(lambda, v);
-			decltype(auto) y_out = meta::template CONDITIONAL_UNARY_OP<XYZ::Y>(lambda, v);
-			decltype(auto) z_out = meta::template CONDITIONAL_UNARY_OP<XYZ::Z>(lambda, v);
-			
-			return ink::Vec(x_out, y_out, z_out);
+			return meta::OperateUnary(lambda, v);
 		}
 		
 	};
