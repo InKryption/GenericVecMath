@@ -8,498 +8,438 @@
 #include <concepts>
 #include <tuple>
 
-
-
 namespace ink {
 	
 	namespace detail {
+		
 		template<typename T, typename U>
 		struct SameTemplate_t: std::false_type {};
 		
-		template<template<typename...> typename Template, typename... TArgs, typename... UArgs>
-		struct SameTemplate_t<Template<TArgs...>, Template<UArgs...>>: std::true_type {};
-		
-		template<template<auto...> typename Template, auto... TArgs, auto... UArgs>
-		struct SameTemplate_t<Template<TArgs...>, Template<UArgs...>>: std::true_type {};
-		
-		template<template<typename, auto...> typename Template, typename T1, typename U1, auto... TArgs, auto... UArgs>
-		struct SameTemplate_t<Template<T1, TArgs...>, Template<U1, UArgs...>>: std::true_type {};
+		template<template<typename...> typename Template, typename... T, typename... U>
+		struct SameTemplate_t<Template<T...>, Template<U...>>: std::true_type {};
 		
 		template<typename T, typename U>
-		concept SameTemplate = SameTemplate_t<T, U>::value;
-		
-		
-		
-		template<typename T, auto Else = sizeof(char)> struct SizeofWVoid_t:
-		std::integral_constant<decltype(sizeof(T)), sizeof(T)> {};
-		
-		template<auto Else> struct SizeofWVoid_t<void, Else>:
-		std::integral_constant<decltype(Else), Else> {};
-		
-		
-		
-		template<size_t i, typename TemplateInstance>
-		struct GetTypeArg;
-		
-		template<size_t i, template<typename...> typename Template, typename... Args>
-		struct GetTypeArg<i, Template<Args...>>
-		{ using type = std::tuple_element_t<i, std::tuple<Args...>>; };
-		
-		template<size_t i, typename TemplateInstance>
-		using GetTypeArg_t = typename GetTypeArg<i, TemplateInstance>::type;
+		concept SameTemplate = SameTemplate_t<std::remove_cvref_t<T>, std::remove_cvref_t<U>>::value;
 		
 	}
 	
 	using detail::SameTemplate;
-	using detail::GetTypeArg_t;
-	
-	template<typename T, auto Else = sizeof(char)>
-	static constexpr auto SizeofWVoid = detail::SizeofWVoid_t<T, Else>::value;
 	
 	template<typename X, typename Y, typename Z> class Vec;
 	
 	namespace detail {
 		
-		struct Noop
-		{
-			constexpr operator std::nullptr_t() const noexcept { return nullptr; }
-			constexpr Noop(std::nullptr_t = nullptr) noexcept {}
-		};
-		
 		enum class XYZ { X , Y , Z };
+		
 		template<typename T, XYZ tag> struct Axis;
 		
+		template<class T> struct Axis<T, XYZ::X>
+		{ T x; constexpr Axis(auto&& x): x(x) {} constexpr Axis(std::nullptr_t = {}) requires(std::default_initializable<T>): x() {} };
 		
+		template<class T> struct Axis<T, XYZ::Y>
+		{ T y; constexpr Axis(auto&& y): y(y) {} constexpr Axis(std::nullptr_t = {}) requires(std::default_initializable<T>): y() {} };
 		
-		template<> struct Axis<void, XYZ::X> {
-			constexpr Axis(std::nullptr_t = nullptr) noexcept {}
-			protected: static constexpr Noop x{};
-		};
+		template<class T> struct Axis<T, XYZ::Z>
+		{ T z; constexpr Axis(auto&& z): z(z) {} constexpr Axis(std::nullptr_t = {}) requires(std::default_initializable<T>): z() {} };
 		
-		template<> struct Axis<void, XYZ::Y> {
-			constexpr Axis(std::nullptr_t = nullptr) noexcept {}
-			protected: static constexpr Noop y{};
-		};
+		struct Empty {};
 		
-		template<> struct Axis<void, XYZ::Z> {
-			constexpr Axis(std::nullptr_t = nullptr) noexcept {}
-			protected: static constexpr Noop z{};
-		};
-		
-		
-		
-		template<typename T> requires(!std::same_as<void, T>)
-		struct Axis<T, XYZ::X> {
-			constexpr Axis(std::nullptr_t = nullptr) requires(std::default_initializable<T>): x() {}
-			constexpr Axis(auto&& x): x(x) {}
-			T x;
-		};
-		
-		template<typename T> requires(!std::same_as<void, T>)
-		struct Axis<T, XYZ::Y> {
-			constexpr Axis(std::nullptr_t = nullptr) requires(std::default_initializable<T>): y() {}
-			constexpr Axis(auto&& y): y(y) {}
-			T y;
-		};
-		
-		template<typename T> requires(!std::same_as<void, T>)
-		struct Axis<T, XYZ::Z> {
-			constexpr Axis(std::nullptr_t = nullptr) requires(std::default_initializable<T>): z() {}
-			constexpr Axis(auto&& z): z(z) {}
-			T z;
-		};
-		
-		
-		template<auto Op, bool PreferVoid = false, typename T, typename U>
-		static constexpr decltype(auto)
-		ConditionalOp_Binary(T&& lhs, U&& rhs) {
-			using Lhs = std::remove_cvref_t<T>;
-			using Rhs = std::remove_cvref_t<U>;
-			constexpr bool
-			lNoop = std::same_as<Noop, Lhs>,
-			rNoop = std::same_as<Noop, Rhs>
-			;
-			
-			if		constexpr((lNoop && rNoop) || ((lNoop || rNoop) && PreferVoid)) return nullptr;
-			else if	constexpr(!lNoop && !rNoop) return Op(std::forward<T>(lhs), std::forward<U>(rhs));
-			
-			else if	constexpr(!lNoop) return std::forward<T>(lhs);
-			else if	constexpr(!rNoop) return std::forward<U>(rhs);
-		}
-		
-		template<auto Op, typename T>
-		static constexpr decltype(auto)
-		ConditionalOp_Unary(T&& v) {
-			using V = std::remove_cvref_t<T>;
-			if		constexpr(std::same_as<Noop, V>) return nullptr;
-			else if	constexpr(!std::same_as<Noop, V>) return Op(std::forward<T>(v));
-		}
-		
-		
+		template<> struct Axis<void, XYZ::X> { constexpr Axis(std::nullptr_t = {}) {} static constexpr Empty x{}; };
+		template<> struct Axis<void, XYZ::Y> { constexpr Axis(std::nullptr_t = {}) {} static constexpr Empty y{}; };
+		template<> struct Axis<void, XYZ::Z> { constexpr Axis(std::nullptr_t = {}) {} static constexpr Empty z{}; };
 		
 		template<typename X, typename Y, typename Z>
-		struct AxisGroupMetaInfo {
+		struct AxisGroup {
 			
 			template<typename, typename, typename> friend class Vec;
-			template<typename, typename, typename> friend struct AxisGroupMetaInfo;
-			template<typename, typename, typename, typename> friend struct VecBase;
+			template<typename, typename, typename> friend struct VecBase;
+			template<typename, typename, typename> friend struct AxisGroup;
 			
-			public:
-			using Tag = XYZ;
+			public: using XYZ = XYZ;
 			
-			public: template<Tag tag>
-			using real_type = std::conditional_t<(tag == Tag::X), X, std::conditional_t<(tag == Tag::Y), Y, Z>>;
+			public: template<XYZ tag>
+			using value_type = std::conditional_t<(tag == XYZ::X), X, std::conditional_t<(tag == XYZ::Y), Y, Z>>;
 			
-			public: template<Tag tag> static constexpr bool
-			is_void = std::same_as<void, real_type<tag>>;
+			public: template<XYZ tag>
+			using real_type = std::conditional_t<
+			(std::same_as<void, value_type<tag>>),
+				decltype(nullptr),
+				value_type<tag>
+			>;
 			
-			public: template<Tag tag>
-			using value_type = std::conditional_t<(is_void<tag>), std::nullptr_t, real_type<tag>>;
+			template<XYZ tag> using Axis = Axis<value_type<tag>, tag>;
 			
-			public: template<Tag tag>
-			using GetAxis = detail::Axis<real_type<tag>, tag>;
+			private: static constexpr size_t
+				sx = [] () { if constexpr(std::is_void_v<X>) { return 1; } else { return sizeof(X); } }(),
+				sy = [] () { if constexpr(std::is_void_v<Y>) { return 1; } else { return sizeof(Y); } }(),
+				sz = [] () { if constexpr(std::is_void_v<Z>) { return 1; } else { return sizeof(Z); } }();
+			private: static constexpr auto
+				XY = sx <=> sy,
+				XZ = sx <=> sz,
+				YZ = sy <=> sz;
 			
-			public: template<Tag tag>
-			static constexpr size_t IndexOfAxis =
-			(tag == Tag::X) ? (2 - char((SizeofWVoid<real_type<Tag::X>>) >= (SizeofWVoid<real_type<Tag::Y>>)) - char((SizeofWVoid<real_type<Tag::X>>) >= (SizeofWVoid<real_type<Tag::Z>>))) :
-			(tag == Tag::Y) ? (2 - char((SizeofWVoid<real_type<Tag::X>>) <  (SizeofWVoid<real_type<Tag::Y>>)) - char((SizeofWVoid<real_type<Tag::Y>>) >= (SizeofWVoid<real_type<Tag::Z>>))) :
-			(tag == Tag::Z) ? (2 - char((SizeofWVoid<real_type<Tag::X>>) <  (SizeofWVoid<real_type<Tag::Z>>)) - char((SizeofWVoid<real_type<Tag::Y>>) <  (SizeofWVoid<real_type<Tag::Z>>))) : -1;
+			private: template<XYZ tag> static constexpr size_t
+			IndexOfAxis =	(XYZ::X == tag) ? 2 - ( (XY >= 0) + (XZ >= 0) ) :
+							(XYZ::Y == tag) ? 2 - ( (XY <  0) + (YZ >= 0) ) :
+							(XYZ::Z == tag) ? 2 - ( (XZ <  0) + (YZ <  0) ) : -1;
 			
-			public: template<size_t i>
-			static constexpr Tag AxisAtIndex =
-			(i == IndexOfAxis<Tag::X>) ? (Tag::X) :
-			(i == IndexOfAxis<Tag::Y>) ? (Tag::Y) :
-			(i == IndexOfAxis<Tag::Z>) ? (Tag::Z) : static_cast<Tag>(static_cast<size_t>(-1));
+			private: template<size_t i> static constexpr XYZ
+			AxisAtIndex =	(IndexOfAxis<XYZ::X> == i) ? XYZ::X :
+							(IndexOfAxis<XYZ::Y> == i) ? XYZ::Y :
+							(IndexOfAxis<XYZ::Z> == i) ? XYZ::Z : static_cast<XYZ>(-1);
 			
-			public: template<size_t i>
-			using AxisAt = GetAxis< AxisAtIndex<i> >;
+			private: template<size_t i> static constexpr decltype(auto)
+			fwd_value(auto&& x, auto&& y, auto&& z) {
+				if constexpr(XYZ::X == AxisAtIndex<i>) return x;
+				if constexpr(XYZ::Y == AxisAtIndex<i>) return y;
+				if constexpr(XYZ::Z == AxisAtIndex<i>) return z;
+			}
+			
+			private: using base0 = Axis<AxisAtIndex<0>>;
+			private: using base1 = Axis<AxisAtIndex<1>>;
+			private: using base2 = Axis<AxisAtIndex<2>>;
+			
+			private: using baseX = Axis<XYZ::X>;
+			private: using baseY = Axis<XYZ::Y>;
+			private: using baseZ = Axis<XYZ::Z>;
+			
+			public: struct VecBase:
+				public base0,
+				public base1,
+				public base2
+			{
+				
+				template<typename, typename, typename> friend class Vec;
+				template<typename, typename, typename> friend struct AxisGroup;
+				template<typename ox, typename oy, typename oz> friend struct AxisGroup<ox,oy,oz>::VecBase;
+				
+				public: constexpr
+				VecBase()
+				noexcept( noexcept(base0()) && noexcept(base1()) && noexcept(base2()) )
+				requires(std::default_initializable<base0> && std::default_initializable<base1> && std::default_initializable<base2>)
+				:	base0(),
+					base1(),
+					base2() {}
+				
+				public: constexpr
+				VecBase(auto&& x, auto&& y, auto&& z)
+				noexcept( noexcept(baseX(x)) && noexcept(baseY(y)) && noexcept(baseZ(z)) )
+				requires(std::constructible_from<baseX, decltype(x)> && std::constructible_from<baseY, decltype(y)> && std::constructible_from<baseZ, decltype(z)>)
+				:	base0(fwd_value<0>(x, y, z)),
+					base1(fwd_value<1>(x, y, z)),
+					base2(fwd_value<2>(x, y, z)) {}
+				
+			};
 			
 		};
 		
-		template<typename X, typename Y, typename Z, typename MetaInfo = AxisGroupMetaInfo<X, Y, Z>>
-		struct VecBase:
-			public MetaInfo::AxisAt<0>,
-			public MetaInfo::AxisAt<1>,
-			public MetaInfo::AxisAt<2>
-		{
+		template<auto Op, bool PreferVoid = false>
+		static constexpr decltype(auto)
+		binary_op(auto&& lhs, auto&& rhs) {
+			using Lhs = std::remove_cvref_t<decltype(lhs)>;
+			using Rhs = std::remove_cvref_t<decltype(rhs)>;
 			
-			template<typename, typename, typename> friend class Vec;
-			template<typename, typename, typename> friend struct AxisGroupMetaInfo;
-			template<typename, typename, typename, typename> friend struct VecBase;
+			constexpr bool
+				lEmpty = std::same_as<detail::Empty, Lhs>,
+				rEmpty = std::same_as<detail::Empty, Rhs>;
 			
-			protected:	using meta = MetaInfo;
-			
-			protected:	using baseX = typename meta::GetAxis<XYZ::X>;
-			protected:	using baseY = typename meta::GetAxis<XYZ::Y>;
-			protected:	using baseZ = typename meta::GetAxis<XYZ::Z>;
-			
-			private:	using base0 = typename meta::AxisAt<0>;
-			private:	using base1 = typename meta::AxisAt<1>;
-			private:	using base2 = typename meta::AxisAt<2>;
-			
-			public: constexpr
-			VecBase()
-			noexcept(noexcept( baseX(), baseY(), baseZ() ))
-			requires(std::default_initializable<base0> && std::default_initializable<base1> && std::default_initializable<base2>)
-			: base0(), base1(), base2() {}
-			
-			public: template<typename OX, typename OY, typename OZ> constexpr
-			VecBase(OX&& x, OY&& y, OZ&& z)
-			noexcept(noexcept( baseX(std::forward<OX>(x)), baseY(std::forward<OY>(y)), baseZ(std::forward<OZ>(z)) ))
-			:	base0( [&]() constexpr noexcept -> decltype(auto) {
-					if constexpr(std::same_as<base0, baseX>) { return std::forward<OX>(x); }
-					if constexpr(std::same_as<base0, baseY>) { return std::forward<OY>(y); }
-					if constexpr(std::same_as<base0, baseZ>) { return std::forward<OZ>(z); }
-				}()),
-				
-				base1( [&]() constexpr noexcept -> decltype(auto) {
-					if constexpr(std::same_as<base1, baseX>) return std::forward<OX>(x);
-					if constexpr(std::same_as<base1, baseY>) return std::forward<OY>(y);
-					if constexpr(std::same_as<base1, baseZ>) return std::forward<OZ>(z);
-				}()),
-				
-				base2( [&]() constexpr noexcept -> decltype(auto) {
-					if constexpr(std::same_as<base2, baseX>) return std::forward<OX>(x);
-					if constexpr(std::same_as<base2, baseY>) return std::forward<OY>(y);
-					if constexpr(std::same_as<base2, baseZ>) return std::forward<OZ>(z);
-				}()) {}
-			
-		};
+			if constexpr(		(lEmpty && rEmpty)
+			|| (PreferVoid &&	(lEmpty || rEmpty)))	{ return nullptr; }
+			else if constexpr(!lEmpty && !rEmpty)		{ return Op(lhs, rhs); }
+			else if constexpr(!lEmpty)					{ return lhs; }
+			else if constexpr(!rEmpty)					{ return rhs; }
+		}
+		
+		template<auto Op>
+		static constexpr decltype(auto)
+		unary_op(auto&& v) {
+			using V = std::remove_cvref_t<decltype(v)>;
+			constexpr bool
+				vEmpty = std::same_as<detail::Empty, V>;
+			if constexpr(vEmpty) { return nullptr; }
+			else return Op(v);
+		}
 		
 	}
 	
-	namespace LambdaOps {
+	template<typename X, typename Y = X, typename Z = void>
+	class Vec: public detail::AxisGroup<X, Y, Z>::VecBase {
 		
-		#define DEFINE_LAMBDA_OP(name, expr, VARS, REQ_VARS)	\
-		static constexpr decltype(auto)	\
-		name = [] VARS constexpr noexcept(noexcept(expr))	\
-		requires requires REQ_VARS { {expr}; }	\
-		{ return expr; };
-		
-		DEFINE_LAMBDA_OP(POSTFIX_INC, v++, (auto&& v), (decltype(v) v))
-		DEFINE_LAMBDA_OP(POSTFIX_DEC, v--, (auto&& v), (decltype(v) v))
-		
-		DEFINE_LAMBDA_OP(PREFIX_INC, ++v, (auto&& v), (decltype(v) v))
-		DEFINE_LAMBDA_OP(PREFIX_DEC, --v, (auto&& v), (decltype(v) v))
-		
-		DEFINE_LAMBDA_OP(BITWISE_NOT, ~v, (auto&& v), (decltype(v) v))
-		DEFINE_LAMBDA_OP(LOGICAL_NOT, !v, (auto&& v), (decltype(v) v))
-		
-		DEFINE_LAMBDA_OP(UNARY_ADD, +v, (auto&& v), (decltype(v) v))
-		DEFINE_LAMBDA_OP(UNARY_SUB, -v, (auto&& v), (decltype(v) v))
-		
-		DEFINE_LAMBDA_OP(MUL, lhs * rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		DEFINE_LAMBDA_OP(DIV, lhs / rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		DEFINE_LAMBDA_OP(MOD, lhs % rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		
-		DEFINE_LAMBDA_OP(ADD, lhs + rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		DEFINE_LAMBDA_OP(SUB, lhs - rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		
-		DEFINE_LAMBDA_OP(SHL, lhs << rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		DEFINE_LAMBDA_OP(SHR, lhs >> rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		
-		DEFINE_LAMBDA_OP(CMP_SPACE_SHIP, lhs <=> rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		DEFINE_LAMBDA_OP(CMP_LT, lhs < rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		DEFINE_LAMBDA_OP(CMP_GT, lhs > rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		DEFINE_LAMBDA_OP(CMP_LT_EQ, lhs <= rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		DEFINE_LAMBDA_OP(CMP_GT_EQ, lhs >= rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		
-		DEFINE_LAMBDA_OP(CMP_EQ, lhs == rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		DEFINE_LAMBDA_OP(CMP_NEQ, lhs != rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		
-		DEFINE_LAMBDA_OP(BITWISE_AND, lhs & rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		DEFINE_LAMBDA_OP(BITWISE_XOR, lhs ^ rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		DEFINE_LAMBDA_OP(BITWISE_OR, lhs | rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		
-		DEFINE_LAMBDA_OP(LOGICAL_AND, lhs && rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		DEFINE_LAMBDA_OP(LOGICAL_OR, lhs || rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
-		
-		
-		#undef DEFINE_LAMBDA_OP
-	}
-	
-	template<typename X, typename Y, typename Z>
-	class Vec: public detail::VecBase<X, Y, Z> {
-		
-		template<typename, typename, typename> friend class Vec;
-		template<typename, typename, typename, typename> friend struct VecBase;
-		template<typename, typename, typename> friend struct AxisGroupMetaInfo;
-		
-		private:
-		using base = detail::VecBase<X, Y, Z>;
-		using meta = typename base::meta;
-		using XYZ = detail::XYZ;
-		
-		using baseX = typename base::baseX;
-		using baseY = typename base::baseY;
-		using baseZ = typename base::baseZ;
-		
-		using ctrX = typename meta::value_type<XYZ::X>;
-		using ctrY = typename meta::value_type<XYZ::Y>;
-		using ctrZ = typename meta::value_type<XYZ::Z>;
-		
-		using typeX = decltype(baseX::x);
-		using typeY = decltype(baseY::y);
-		using typeZ = decltype(baseZ::z);
-		
-		/* Default constructor */
+		private: using XYZ = detail::XYZ;
+		private: using meta = detail::AxisGroup<X, Y, Z>;
+		private: using base = typename meta::VecBase;
 		
 		public: constexpr
-		Vec()
-		noexcept(noexcept(base()))
-		requires(std::default_initializable<base>)
+		Vec() noexcept(noexcept(base())) requires(std::default_initializable<base>)
 		: base() {}
 		
 		public: constexpr
-		Vec(ctrX const& x, ctrY const& y, ctrZ const& z)
-		noexcept(noexcept( base(x, y, z) ))
+		Vec(auto&& x, auto&& y, auto&& z)
+		noexcept(noexcept(base(x, y, z)))
 		: base(x, y, z) {}
 		
-		public: template<std::convertible_to<ctrX> OX, std::convertible_to<ctrY> OY, std::convertible_to<ctrZ> OZ>
-		constexpr
-		Vec(Vec<OX, OY, OZ> const& other)
-		noexcept(noexcept( base(static_cast<typeX>(other.x), static_cast<typeY>(other.y), static_cast<typeZ>(other.z)) ))
-		: base(static_cast<typeX>(other.x), static_cast<typeY>(other.y), static_cast<typeZ>(other.z)) {}
-		
-		
-		
 		public: constexpr
-		Vec(ctrX const& x, ctrY const& y)
-		noexcept(noexcept( base(x, y, nullptr) ))
-		requires(std::same_as<Z, void> || std::default_initializable<baseZ>)
+		Vec(auto&& x, auto&& y)
+		noexcept( noexcept(base(x, y, nullptr)) )
+		requires(std::is_void_v<Z> || std::default_initializable<Z>)
 		: base(x, y, nullptr) {}
 		
 		public: constexpr
-		Vec(ctrX const& x, ctrZ const& z)
-		noexcept(noexcept( base(x, nullptr, z) ))
-		requires(std::same_as<Y, void>)
+		Vec(auto&& x, auto&& z)
+		noexcept( noexcept(base(x, nullptr, z)) )
+		requires(!std::is_void_v<X> && std::is_void_v<Y> && !std::is_void_v<Z>)
 		: base(x, nullptr, z) {}
 		
 		public: constexpr
-		Vec(ctrY const& y, ctrZ const& z)
-		noexcept(noexcept( base(nullptr, y, z) ))
-		requires(std::same_as<X, void>)
+		Vec(auto&& y, auto&& z)
+		noexcept( noexcept(base(nullptr, y, z)) )
+		requires(std::is_void_v<X> && !std::is_void_v<Y> && !std::is_void_v<Z>)
 		: base(nullptr, y, z) {}
 		
-		
-		
 		public: constexpr explicit
-		Vec(ctrX const& x)
-		noexcept(noexcept( base(x, nullptr, nullptr) ))
-		requires((std::same_as<void, Y> || std::default_initializable<baseY>) && (std::same_as<void, Z> || std::default_initializable<baseZ>))
+		Vec(auto&& x)
+		noexcept( noexcept(base(x, nullptr, nullptr)) )
+		requires( (std::is_void_v<Y> || std::default_initializable<Y>) && (std::is_void_v<Z> || std::default_initializable<Z>) )
 		: base(x, nullptr, nullptr) {}
 		
 		public: constexpr explicit
-		Vec(ctrY const& y)
-		noexcept(noexcept( base(nullptr, y, nullptr) ))
-		requires(std::same_as<void, X> && (std::same_as<void, Z> && std::default_initializable<baseZ>))
+		Vec(auto&& y)
+		noexcept( noexcept(base(nullptr, y, nullptr)) )
+		requires( std::is_void_v<X> && !std::is_void_v<Y> && (std::is_void_v<Z> || std::default_initializable<Z>) )
 		: base(nullptr, y, nullptr) {}
 		
 		public: constexpr explicit
-		Vec(ctrZ const& z)
-		noexcept(noexcept( base(nullptr, nullptr, z) ))
-		requires(std::same_as<void, X> && std::same_as<void, Y>)
+		Vec(auto&& z)
+		noexcept( noexcept(base(nullptr, nullptr, z)) )
+		requires( std::is_void_v<X> && std::is_void_v<Y> && !std::is_void_v<Z> )
 		: base(nullptr, nullptr, z) {}
 		
 		
 		
-		private: template<auto Op, bool PreferVoid = false>
-		static constexpr decltype(auto)
-		operate_vecs(auto&& lhs, auto&& rhs)
-		requires requires(decltype(lhs) lhs, decltype(rhs) rhs)
-		{
-			{detail::ConditionalOp_Binary<Op>(lhs.x, rhs.x)};
-			{detail::ConditionalOp_Binary<Op>(lhs.y, rhs.y)};
-			{detail::ConditionalOp_Binary<Op>(lhs.z, rhs.z)};
-		}
-		{
+		public: template<typename OX, typename OY, typename OZ>
+		friend constexpr decltype(auto)
+		operator*(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
+			constexpr decltype(auto) mul =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs * rhs; };
 			return ink::Vec(
-				detail::ConditionalOp_Binary<Op, PreferVoid>(lhs.x, rhs.x),
-				detail::ConditionalOp_Binary<Op, PreferVoid>(lhs.y, rhs.y),
-				detail::ConditionalOp_Binary<Op, PreferVoid>(lhs.z, rhs.z)
+				binary_op<mul>(lhs.x, rhs.x),
+				binary_op<mul>(lhs.y, rhs.y),
+				binary_op<mul>(lhs.z, rhs.z)
 			);
 		}
 		
-		public: template<typename RX, typename RY, typename RZ>
-		requires requires(Vec lhs, Vec<RX, RY, RZ> rhs)
-		{ operate_vecs<LambdaOps::MUL>(lhs, rhs); }
-		friend constexpr decltype(auto)
-		operator*(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
-		{ return operate_vecs<LambdaOps::MUL>(lhs, rhs); }
-		
 		public: template<typename T>
-		requires(!SameTemplate<Vec, T>)
 		friend constexpr decltype(auto)
-		operator*(Vec const& lhs, T const& rhs)
-		{ return operate_vecs<LambdaOps::MUL, true>(lhs, ink::Vec(rhs, rhs, rhs)); }
-		
-		public: template<typename T>
-		requires(!SameTemplate<Vec, T>)
-		friend constexpr decltype(auto)
-		operator*(T const& lhs, Vec const& rhs)
-		{ return operate_vecs<LambdaOps::MUL, true>(ink::Vec(lhs, lhs, lhs), rhs); }
-		
-		
-		
-		public: template<typename RX, typename RY, typename RZ>
-		requires requires(Vec lhs, Vec<RX, RY, RZ> rhs)
-		{ operate_vecs<LambdaOps::DIV>(lhs, rhs); }
-		friend constexpr decltype(auto)
-		operator/(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
-		{ return operate_vecs<LambdaOps::DIV>(lhs, rhs); }
-		
-		public: template<typename T>
-		requires(!SameTemplate<Vec, T>)
-		friend constexpr decltype(auto)
-		operator/(Vec const& lhs, T const& rhs)
-		{ return operate_vecs<LambdaOps::DIV, true>(lhs, ink::Vec(rhs, rhs, rhs)); }
-		
-		public: template<typename T>
-		requires(!SameTemplate<Vec, T>)
-		friend constexpr decltype(auto)
-		operator/(T const& lhs, Vec const& rhs)
-		{ return operate_vecs<LambdaOps::DIV, true>(ink::Vec(lhs, lhs, lhs), rhs); }
-		
-		
-		
-		public: template<typename RX, typename RY, typename RZ>
-		requires requires(Vec lhs, Vec<RX, RY, RZ> rhs)
-		{ operate_vecs<LambdaOps::MOD>(lhs, rhs); }
-		friend constexpr decltype(auto)
-		operator%(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
-		{ return operate_vecs<LambdaOps::MOD>(lhs, rhs); }
-		
-		public: template<typename T>
-		requires(!SameTemplate<Vec, T>)
-		friend constexpr decltype(auto)
-		operator%(Vec const& lhs, T const& rhs)
-		{ return operate_vecs<LambdaOps::MOD, true>(lhs, ink::Vec(rhs, rhs, rhs)); }
-		
-		public: template<typename T>
-		requires(!SameTemplate<Vec, T>)
-		friend constexpr decltype(auto)
-		operator%(T const& lhs, Vec const& rhs)
-		{ return operate_vecs<LambdaOps::MOD, true>(ink::Vec(lhs, lhs, lhs), rhs); }
-		
-		
-		
-		public: template<typename RX, typename RY, typename RZ>
-		requires requires(Vec lhs, Vec<RX, RY, RZ> rhs)
-		{ operate_vecs<LambdaOps::ADD>(lhs, rhs); }
-		friend constexpr decltype(auto)
-		operator+(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
-		{ return operate_vecs<LambdaOps::ADD>(lhs, rhs); }
-		
-		public:
-		friend constexpr decltype(auto)
-		operator-(Vec const& vec)
-		// requires requires(Vec vec) {
-		// 	detail::ConditionalOp_Unary<LambdaOps::UNARY_ADD>(vec.x);
-		// 	detail::ConditionalOp_Unary<LambdaOps::UNARY_ADD>(vec.y);
-		// 	detail::ConditionalOp_Unary<LambdaOps::UNARY_ADD>(vec.z);
-		// }
-		{
+		operator*(Vec const& lhs, T const& rhs) {
+			constexpr decltype(auto) mul =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs * rhs; };
 			return ink::Vec(
-				detail::ConditionalOp_Unary<LambdaOps::UNARY_SUB>(vec.x),
-				detail::ConditionalOp_Unary<LambdaOps::UNARY_SUB>(vec.y),
-				detail::ConditionalOp_Unary<LambdaOps::UNARY_SUB>(vec.z));
+				binary_op<mul, true>(lhs.x, rhs),
+				binary_op<mul, true>(lhs.y, rhs),
+				binary_op<mul, true>(lhs.z, rhs)
+			);
 		}
 		
-		public: template<typename RX, typename RY, typename RZ>
-		requires requires(Vec lhs, Vec<RX, RY, RZ> rhs)
-		{ operate_vecs<LambdaOps::SUB>(lhs, rhs); }
+		public: template<typename T>
 		friend constexpr decltype(auto)
-		operator-(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
-		{ return operate_vecs<LambdaOps::SUB>(lhs, rhs); }
+		operator*(T const& lhs, Vec const& rhs) {
+			constexpr decltype(auto) mul =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs * rhs; };
+			return ink::Vec(
+				binary_op<mul, true>(lhs, rhs.x),
+				binary_op<mul, true>(lhs, rhs.y),
+				binary_op<mul, true>(lhs, rhs.z)
+			);
+		}
+		
+		
+		
+		public: template<typename OX, typename OY, typename OZ>
+		friend constexpr decltype(auto)
+		operator/(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
+			constexpr decltype(auto) div =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
+			return ink::Vec(
+				binary_op<div>(lhs.x, rhs.x),
+				binary_op<div>(lhs.y, rhs.y),
+				binary_op<div>(lhs.z, rhs.z)
+			);
+		}
+		
+		public: template<typename T>
+		friend constexpr decltype(auto)
+		operator/(Vec const& lhs, T const& rhs) {
+			constexpr decltype(auto) div =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
+			return ink::Vec(
+				binary_op<div, true>(lhs.x, rhs),
+				binary_op<div, true>(lhs.y, rhs),
+				binary_op<div, true>(lhs.z, rhs)
+			);
+		}
+		
+		public: template<typename T>
+		friend constexpr decltype(auto)
+		operator/(T const& lhs, Vec const& rhs) {
+			constexpr decltype(auto) div =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
+			return ink::Vec(
+				detail::binary_op<div, true>(lhs, rhs.x),
+				detail::binary_op<div, true>(lhs, rhs.y),
+				detail::binary_op<div, true>(lhs, rhs.z)
+			);
+		}
+		
+		
+		
+		public: template<typename OX, typename OY, typename OZ>
+		friend constexpr decltype(auto)
+		operator%(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
+			constexpr decltype(auto) mod =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs % rhs; };
+			return ink::Vec(
+				binary_op<mod>(lhs.x, rhs.x),
+				binary_op<mod>(lhs.y, rhs.y),
+				binary_op<mod>(lhs.z, rhs.z)
+			);
+		}
+		
+		public: template<typename T> requires(!SameTemplate<T, Vec>)
+		friend constexpr decltype(auto)
+		operator%(Vec const& lhs, T const& rhs) {
+			constexpr decltype(auto) mod =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs % rhs; };
+			return ink::Vec(
+				binary_op<mod, true>(lhs.x, rhs),
+				binary_op<mod, true>(lhs.y, rhs),
+				binary_op<mod, true>(lhs.z, rhs)
+			);
+		}
+		
+		public: template<typename T> requires(!SameTemplate<T, Vec>)
+		friend constexpr decltype(auto)
+		operator%(T const& lhs, Vec const& rhs) {
+			constexpr decltype(auto) mod =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs % rhs; };
+			return ink::Vec(
+				binary_op<mod, true>(lhs, rhs.x),
+				binary_op<mod, true>(lhs, rhs.y),
+				binary_op<mod, true>(lhs, rhs.z)
+			);
+		}
+		
+		
+		
+		public: template<typename OX, typename OY, typename OZ>
+		friend constexpr decltype(auto)
+		operator+(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
+			constexpr decltype(auto) add =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs + rhs; };
+			return ink::Vec(
+				binary_op<add>(lhs.x, rhs.x),
+				binary_op<add>(lhs.y, rhs.y),
+				binary_op<add>(lhs.z, rhs.z)
+			);
+		}
+		
+		public: friend constexpr decltype(auto)
+		operator+(Vec const& vec) {
+			constexpr decltype(auto) plus =
+			[](auto&& v) constexpr { return +v; };
+			return ink::Vec(
+				unary_op<plus>(vec.x),
+				unary_op<plus>(vec.y),
+				unary_op<plus>(vec.z)
+			);
+		}
+		
+		
+		
+		public: template<typename OX, typename OY, typename OZ>
+		friend constexpr decltype(auto)
+		operator-(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
+			constexpr decltype(auto) sub =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs - rhs; };
+			return ink::Vec(
+				binary_op<sub>(lhs.x, rhs.x),
+				binary_op<sub>(lhs.y, rhs.y),
+				binary_op<sub>(lhs.z, rhs.z)
+			);
+		}
+		
+		public: friend constexpr decltype(auto)
+		operator-(Vec const& vec) {
+			constexpr decltype(auto) minus =
+			[](auto&& v) constexpr { return -v; };
+			return ink::Vec(
+				unary_op<minus>(vec.x),
+				unary_op<minus>(vec.y),
+				unary_op<minus>(vec.z)
+			);
+		}
 		
 	};
 	
+	template<typename X, typename Y, typename Z> Vec(Vec<X,Y,Z>) -> Vec<X, Y, Z>;
 	
+	Vec() -> Vec<void, void, void>;
+	template<typename X, typename Y, typename Z> Vec(X, Y, Z) -> Vec<
+		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
+		std::conditional_t<(std::same_as<Y, std::nullptr_t>), void, Y>,
+		std::conditional_t<(std::same_as<Z, std::nullptr_t>), void, Z>	>;
 	
-	template<typename X, typename Y, typename Z> Vec(X, Y, Z) -> Vec<X, Y, Z>;
-	Vec(std::nullptr_t, std::nullptr_t, std::nullptr_t) -> Vec<void, void, void>;
+	template<typename X, typename Y> Vec(X, Y) -> Vec<
+		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
+		std::conditional_t<(std::same_as<Y, std::nullptr_t>), void, Y>,
+		void	>;
 	
-	template<typename X, typename Y> Vec(X, Y, std::nullptr_t) -> Vec<X, Y, void>;
-	template<typename X, typename Z> Vec(X, std::nullptr_t, Z) -> Vec<X, void, Z>;
-	template<typename Y, typename Z> Vec(std::nullptr_t, Y, Z) -> Vec<void, Y, Z>;
+	template<typename X> Vec(X) -> Vec<
+		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
+		void, void	>;
 	
-	template<typename X, typename Y> Vec(X, Y) -> Vec<X, Y, void>;
+	template<typename T, typename U>
+	requires(!SameTemplate<Vec<void>, T> && !SameTemplate<Vec<void>, U>)
+	static constexpr decltype(auto)
+	fmod(T&& lhs, U&& rhs)
+	{ return lhs - (rhs * static_cast<size_t>(lhs/rhs)); }
 	
-	template<typename X> Vec(X, std::nullptr_t, std::nullptr_t) -> Vec<X, void, void>;
-	template<typename Y> Vec(std::nullptr_t, Y, std::nullptr_t) -> Vec<void, Y, void>;
-	template<typename Z> Vec(std::nullptr_t, std::nullptr_t, Z) -> Vec<void, void, Z>;
+	static constexpr decltype(auto)
+	fmod(SameTemplate<Vec<void>> auto&& lhs, SameTemplate<Vec<void>> auto&& rhs) {
+		constexpr decltype(auto) mod =
+		[](auto&& lhs, auto&& rhs) constexpr
+		{ return lhs - (rhs * static_cast<size_t>(lhs/rhs)); };
+		return ink::Vec(
+			detail::binary_op<mod>(lhs.x, rhs.x),
+			detail::binary_op<mod>(lhs.y, rhs.y),
+			detail::binary_op<mod>(lhs.z, rhs.z)
+		);
+	}
 	
-	template<typename X> Vec(X, std::nullptr_t) -> Vec<X, void, void>;
-	template<typename Y> Vec(std::nullptr_t, Y) -> Vec<void, Y, void>;
-	template<typename X> Vec(X) -> Vec<X, void, void>;
+	template<typename T> requires(!SameTemplate<T, Vec<void>>)
+	static constexpr decltype(auto)
+	fmod(SameTemplate<Vec<void>> auto&& lhs, T const& rhs) {
+		constexpr decltype(auto) mod =
+		[](auto&& lhs, auto&& rhs) constexpr
+		{ return lhs - (rhs * static_cast<size_t>(lhs/rhs)); };
+		return ink::Vec(
+			detail::binary_op<mod, true>(lhs.x, rhs),
+			detail::binary_op<mod, true>(lhs.y, rhs),
+			detail::binary_op<mod, true>(lhs.z, rhs)
+		);
+	}
 	
-	template<typename X, typename Y, typename Z> Vec(Vec<X, Y, Z>) -> Vec<std::remove_cvref_t<X>, std::remove_cvref_t<Y>, std::remove_cvref_t<Z>>;
-	
-}
-
-void test() {
-	
-	
+	template<typename T> requires(!SameTemplate<T, Vec<void>>)
+	static constexpr decltype(auto)
+	fmod(T const& lhs, SameTemplate<Vec<void>> auto&& rhs) {
+		constexpr decltype(auto) mod =
+		[](auto&& lhs, auto&& rhs) constexpr
+		{ return lhs - (rhs * static_cast<size_t>(lhs/rhs)); };
+		return ink::Vec(
+			detail::binary_op<mod, true>(lhs, rhs.x),
+			detail::binary_op<mod, true>(lhs, rhs.y),
+			detail::binary_op<mod, true>(lhs, rhs.z)
+		);
+	}
 	
 }
 
