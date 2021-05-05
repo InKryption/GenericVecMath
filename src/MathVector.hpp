@@ -233,6 +233,35 @@ namespace ink {
 		
 	}
 	
+	namespace LambdaOps {
+		
+		static constexpr decltype(auto)
+		ADD = [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs + rhs))
+		requires requires(decltype(lhs) l, decltype(rhs) r) { {l + r}; }
+		{ return lhs + rhs; };
+		
+		static constexpr decltype(auto)
+		SUB = [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs - rhs))
+		requires requires(decltype(lhs) l, decltype(rhs) r) { {l - r}; }
+		{ return lhs - rhs; };
+		
+		static constexpr decltype(auto)
+		MUL = [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs * rhs))
+		requires requires(decltype(lhs) l, decltype(rhs) r) { {l * r}; }
+		{ return lhs * rhs; };
+		
+		static constexpr decltype(auto)
+		DIV = [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs / rhs))
+		requires requires(decltype(lhs) l, decltype(rhs) r) { {l / r}; }
+		{ return lhs / rhs; };
+		
+		static constexpr decltype(auto)
+		MOD = [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs % rhs))
+		requires requires(decltype(lhs) l, decltype(rhs) r) { {l % r}; }
+		{ return lhs % rhs; };
+		
+	}
+	
 	template<typename X, typename Y, typename Z>
 	class Vec: public detail::VecBase<X, Y, Z> {
 		
