@@ -222,9 +222,9 @@ namespace ink {
 			constexpr decltype(auto) mul =
 			[](auto&& lhs, auto&& rhs) constexpr { return lhs * rhs; };
 			return ink::Vec(
-				binary_op<mul>(lhs.x, rhs.x),
-				binary_op<mul>(lhs.y, rhs.y),
-				binary_op<mul>(lhs.z, rhs.z)
+				detail::binary_op<mul>(lhs.x, rhs.x),
+				detail::binary_op<mul>(lhs.y, rhs.y),
+				detail::binary_op<mul>(lhs.z, rhs.z)
 			);
 		}
 		
@@ -234,9 +234,9 @@ namespace ink {
 			constexpr decltype(auto) mul =
 			[](auto&& lhs, auto&& rhs) constexpr { return lhs * rhs; };
 			return ink::Vec(
-				binary_op<mul, true>(lhs.x, rhs),
-				binary_op<mul, true>(lhs.y, rhs),
-				binary_op<mul, true>(lhs.z, rhs)
+				detail::binary_op<mul, true>(lhs.x, rhs),
+				detail::binary_op<mul, true>(lhs.y, rhs),
+				detail::binary_op<mul, true>(lhs.z, rhs)
 			);
 		}
 		
@@ -246,9 +246,9 @@ namespace ink {
 			constexpr decltype(auto) mul =
 			[](auto&& lhs, auto&& rhs) constexpr { return lhs * rhs; };
 			return ink::Vec(
-				binary_op<mul, true>(lhs, rhs.x),
-				binary_op<mul, true>(lhs, rhs.y),
-				binary_op<mul, true>(lhs, rhs.z)
+				detail::binary_op<mul, true>(lhs, rhs.x),
+				detail::binary_op<mul, true>(lhs, rhs.y),
+				detail::binary_op<mul, true>(lhs, rhs.z)
 			);
 		}
 		
@@ -260,9 +260,9 @@ namespace ink {
 			constexpr decltype(auto) div =
 			[](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
 			return ink::Vec(
-				binary_op<div>(lhs.x, rhs.x),
-				binary_op<div>(lhs.y, rhs.y),
-				binary_op<div>(lhs.z, rhs.z)
+				detail::binary_op<div>(lhs.x, rhs.x),
+				detail::binary_op<div>(lhs.y, rhs.y),
+				detail::binary_op<div>(lhs.z, rhs.z)
 			);
 		}
 		
@@ -272,9 +272,9 @@ namespace ink {
 			constexpr decltype(auto) div =
 			[](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
 			return ink::Vec(
-				binary_op<div, true>(lhs.x, rhs),
-				binary_op<div, true>(lhs.y, rhs),
-				binary_op<div, true>(lhs.z, rhs)
+				detail::binary_op<div, true>(lhs.x, rhs),
+				detail::binary_op<div, true>(lhs.y, rhs),
+				detail::binary_op<div, true>(lhs.z, rhs)
 			);
 		}
 		
@@ -298,9 +298,9 @@ namespace ink {
 			constexpr decltype(auto) mod =
 			[](auto&& lhs, auto&& rhs) constexpr { return lhs % rhs; };
 			return ink::Vec(
-				binary_op<mod>(lhs.x, rhs.x),
-				binary_op<mod>(lhs.y, rhs.y),
-				binary_op<mod>(lhs.z, rhs.z)
+				detail::binary_op<mod>(lhs.x, rhs.x),
+				detail::binary_op<mod>(lhs.y, rhs.y),
+				detail::binary_op<mod>(lhs.z, rhs.z)
 			);
 		}
 		
@@ -310,9 +310,9 @@ namespace ink {
 			constexpr decltype(auto) mod =
 			[](auto&& lhs, auto&& rhs) constexpr { return lhs % rhs; };
 			return ink::Vec(
-				binary_op<mod, true>(lhs.x, rhs),
-				binary_op<mod, true>(lhs.y, rhs),
-				binary_op<mod, true>(lhs.z, rhs)
+				detail::binary_op<mod, true>(lhs.x, rhs),
+				detail::binary_op<mod, true>(lhs.y, rhs),
+				detail::binary_op<mod, true>(lhs.z, rhs)
 			);
 		}
 		
@@ -322,9 +322,9 @@ namespace ink {
 			constexpr decltype(auto) mod =
 			[](auto&& lhs, auto&& rhs) constexpr { return lhs % rhs; };
 			return ink::Vec(
-				binary_op<mod, true>(lhs, rhs.x),
-				binary_op<mod, true>(lhs, rhs.y),
-				binary_op<mod, true>(lhs, rhs.z)
+				detail::binary_op<mod, true>(lhs, rhs.x),
+				detail::binary_op<mod, true>(lhs, rhs.y),
+				detail::binary_op<mod, true>(lhs, rhs.z)
 			);
 		}
 		
@@ -336,9 +336,9 @@ namespace ink {
 			constexpr decltype(auto) add =
 			[](auto&& lhs, auto&& rhs) constexpr { return lhs + rhs; };
 			return ink::Vec(
-				binary_op<add>(lhs.x, rhs.x),
-				binary_op<add>(lhs.y, rhs.y),
-				binary_op<add>(lhs.z, rhs.z)
+				detail::binary_op<add>(lhs.x, rhs.x),
+				detail::binary_op<add>(lhs.y, rhs.y),
+				detail::binary_op<add>(lhs.z, rhs.z)
 			);
 		}
 		
@@ -347,9 +347,9 @@ namespace ink {
 			constexpr decltype(auto) plus =
 			[](auto&& v) constexpr { return +v; };
 			return ink::Vec(
-				unary_op<plus>(vec.x),
-				unary_op<plus>(vec.y),
-				unary_op<plus>(vec.z)
+				detail::unary_op<plus>(vec.x),
+				detail::unary_op<plus>(vec.y),
+				detail::unary_op<plus>(vec.z)
 			);
 		}
 		
@@ -361,9 +361,9 @@ namespace ink {
 			constexpr decltype(auto) sub =
 			[](auto&& lhs, auto&& rhs) constexpr { return lhs - rhs; };
 			return ink::Vec(
-				binary_op<sub>(lhs.x, rhs.x),
-				binary_op<sub>(lhs.y, rhs.y),
-				binary_op<sub>(lhs.z, rhs.z)
+				detail::binary_op<sub>(lhs.x, rhs.x),
+				detail::binary_op<sub>(lhs.y, rhs.y),
+				detail::binary_op<sub>(lhs.z, rhs.z)
 			);
 		}
 		
@@ -372,9 +372,9 @@ namespace ink {
 			constexpr decltype(auto) minus =
 			[](auto&& v) constexpr { return -v; };
 			return ink::Vec(
-				unary_op<minus>(vec.x),
-				unary_op<minus>(vec.y),
-				unary_op<minus>(vec.z)
+				detail::unary_op<minus>(vec.x),
+				detail::unary_op<minus>(vec.y),
+				detail::unary_op<minus>(vec.z)
 			);
 		}
 		
