@@ -35,9 +35,23 @@ namespace ink {
 		
 		template<auto Else> struct SizeofWVoid_t<void, Else>:
 		std::integral_constant<decltype(Else), Else> {};
+		
+		
+		
+		template<size_t i, typename TemplateInstance>
+		struct GetTypeArg;
+		
+		template<size_t i, template<typename...> typename Template, typename... Args>
+		struct GetTypeArg<i, Template<Args...>>
+		{ using type = std::tuple_element_t<i, std::tuple<Args...>>; };
+		
+		template<size_t i, typename TemplateInstance>
+		using GetTypeArg_t = typename GetTypeArg<i, TemplateInstance>::type;
+		
 	}
 	
 	using detail::SameTemplate;
+	using detail::GetTypeArg_t;
 	
 	template<typename T, auto Else = sizeof(char)>
 	static constexpr auto SizeofWVoid = detail::SizeofWVoid_t<T, Else>::value;
@@ -96,9 +110,39 @@ namespace ink {
 		};
 		
 		
+		template<auto Op, bool PreferVoid = false, typename T, typename U>
+		static constexpr decltype(auto)
+		ConditionalOp_Binary(T&& lhs, U&& rhs) {
+			using Lhs = std::remove_cvref_t<T>;
+			using Rhs = std::remove_cvref_t<U>;
+			constexpr bool
+			lNoop = std::same_as<Noop, Lhs>,
+			rNoop = std::same_as<Noop, Rhs>
+			;
+			
+			if		constexpr((lNoop && rNoop) || ((lNoop || rNoop) && PreferVoid)) return nullptr;
+			else if	constexpr(!lNoop && !rNoop) return Op(std::forward<T>(lhs), std::forward<U>(rhs));
+			
+			else if	constexpr(!lNoop) return std::forward<T>(lhs);
+			else if	constexpr(!rNoop) return std::forward<U>(rhs);
+		}
+		
+		template<auto Op, typename T>
+		static constexpr decltype(auto)
+		ConditionalOp_Unary(T&& v) {
+			using V = std::remove_cvref_t<T>;
+			if		constexpr(std::same_as<Noop, V>) return nullptr;
+			else if	constexpr(!std::same_as<Noop, V>) return Op(std::forward<T>(v));
+		}
+		
+		
 		
 		template<typename X, typename Y, typename Z>
 		struct AxisGroupMetaInfo {
+			
+			template<typename, typename, typename> friend class Vec;
+			template<typename, typename, typename> friend struct AxisGroupMetaInfo;
+			template<typename, typename, typename, typename> friend struct VecBase;
 			
 			public:
 			using Tag = XYZ;
@@ -129,55 +173,6 @@ namespace ink {
 			
 			public: template<size_t i>
 			using AxisAt = GetAxis< AxisAtIndex<i> >;
-			
-			template<typename RX, typename RY, typename RZ> static constexpr decltype(auto)
-			OperateVecs(auto&& Op, Vec<X, Y, Z> const& lhs, Vec<RX, RY, RZ> const& rhs) {
-				constexpr auto GetProperValue = [](auto&& Op, auto&& l, auto&& r) constexpr {
-					using lT = std::remove_cvref_t<decltype(l)>;
-					using rT = std::remove_cvref_t<decltype(r)>;
-					if		constexpr(std::same_as<Noop, lT> && std::same_as<Noop, rT>)		return nullptr;
-					else if	constexpr(!std::same_as<Noop, lT> && !std::same_as<Noop, rT>)	return Op(l, r);
-					else if	constexpr(!std::same_as<Noop, lT>) return l;
-					else if	constexpr(!std::same_as<Noop, rT>) return r;
-				};
-				
-				return ink::Vec( GetProperValue(Op, lhs.x, rhs.x), GetProperValue(Op, lhs.y, rhs.y), GetProperValue(Op, lhs.z, rhs.z) );
-			}
-			
-			template<typename T> static constexpr decltype(auto)
-			OperateScalarRight(auto&& Op, Vec<X, Y, Z> const& lhs, T const& rhs) {
-				constexpr auto GetProperValue = [](auto&& Op, auto&& l, auto&& r) constexpr {
-					using lT = std::remove_cvref_t<decltype(l)>;
-					using rT = std::remove_cvref_t<decltype(r)>;
-					if constexpr(std::same_as<lT, Noop> || std::same_as<rT, Noop>) return nullptr;
-					else return Op(l, r);
-				};
-				
-				return ink::Vec( GetProperValue(Op, lhs.x, rhs), GetProperValue(Op, lhs.y, rhs), GetProperValue(Op, lhs.z, rhs) );
-			}
-			
-			template<typename T> static constexpr decltype(auto)
-			OperateScalarLeft(auto&& Op, T const& lhs, Vec<X, Y, Z> const& rhs) {
-				constexpr auto GetProperValue = [](auto&& Op, auto&& l, auto&& r) constexpr {
-					using lT = std::remove_cvref_t<decltype(l)>;
-					using rT = std::remove_cvref_t<decltype(r)>;
-					if constexpr(std::same_as<lT, Noop> || std::same_as<rT, Noop>) return nullptr;
-					else return Op(l, r);
-				};
-				
-				return ink::Vec( GetProperValue(Op, lhs, rhs.x), GetProperValue(Op, lhs, rhs.y), GetProperValue(Op, lhs, rhs.z) );
-			}
-			
-			static constexpr decltype(auto)
-			OperateUnary(auto&& Op, Vec<X, Y, Z> const& vec) {
-				constexpr auto GetProperValue = [](auto&& Op, auto&& v) constexpr {
-					using T = std::remove_cvref_t<decltype(v)>;
-					if constexpr(std::same_as<T, Noop>) return nullptr;
-					else return Op(v);
-				};
-				
-				return ink::Vec( GetProperValue(Op, vec.x), GetProperValue(Op, vec.y), GetProperValue(Op, vec.z) );
-			}
 			
 		};
 		
@@ -235,38 +230,60 @@ namespace ink {
 	
 	namespace LambdaOps {
 		
-		static constexpr decltype(auto)
-		ADD = [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs + rhs))
-		requires requires(decltype(lhs) l, decltype(rhs) r) { {l + r}; }
-		{ return lhs + rhs; };
+		#define DEFINE_LAMBDA_OP(name, expr, VARS, REQ_VARS)	\
+		static constexpr decltype(auto)	\
+		name = [] VARS constexpr noexcept(noexcept(expr))	\
+		requires requires REQ_VARS { {expr}; }	\
+		{ return expr; };
 		
-		static constexpr decltype(auto)
-		SUB = [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs - rhs))
-		requires requires(decltype(lhs) l, decltype(rhs) r) { {l - r}; }
-		{ return lhs - rhs; };
+		DEFINE_LAMBDA_OP(POSTFIX_INC, v++, (auto&& v), (decltype(v) v))
+		DEFINE_LAMBDA_OP(POSTFIX_DEC, v--, (auto&& v), (decltype(v) v))
 		
-		static constexpr decltype(auto)
-		MUL = [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs * rhs))
-		requires requires(decltype(lhs) l, decltype(rhs) r) { {l * r}; }
-		{ return lhs * rhs; };
+		DEFINE_LAMBDA_OP(PREFIX_INC, ++v, (auto&& v), (decltype(v) v))
+		DEFINE_LAMBDA_OP(PREFIX_DEC, --v, (auto&& v), (decltype(v) v))
 		
-		static constexpr decltype(auto)
-		DIV = [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs / rhs))
-		requires requires(decltype(lhs) l, decltype(rhs) r) { {l / r}; }
-		{ return lhs / rhs; };
+		DEFINE_LAMBDA_OP(BITWISE_NOT, ~v, (auto&& v), (decltype(v) v))
+		DEFINE_LAMBDA_OP(LOGICAL_NOT, !v, (auto&& v), (decltype(v) v))
 		
-		static constexpr decltype(auto)
-		MOD = [](auto&& lhs, auto&& rhs) constexpr noexcept(noexcept(lhs % rhs))
-		requires requires(decltype(lhs) l, decltype(rhs) r) { {l % r}; }
-		{ return lhs % rhs; };
+		DEFINE_LAMBDA_OP(UNARY_ADD, +v, (auto&& v), (decltype(v) v))
+		DEFINE_LAMBDA_OP(UNARY_SUB, -v, (auto&& v), (decltype(v) v))
 		
+		DEFINE_LAMBDA_OP(MUL, lhs * rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		DEFINE_LAMBDA_OP(DIV, lhs / rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		DEFINE_LAMBDA_OP(MOD, lhs % rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		
+		DEFINE_LAMBDA_OP(ADD, lhs + rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		DEFINE_LAMBDA_OP(SUB, lhs - rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		
+		DEFINE_LAMBDA_OP(SHL, lhs << rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		DEFINE_LAMBDA_OP(SHR, lhs >> rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		
+		DEFINE_LAMBDA_OP(CMP_SPACE_SHIP, lhs <=> rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		DEFINE_LAMBDA_OP(CMP_LT, lhs < rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		DEFINE_LAMBDA_OP(CMP_GT, lhs > rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		DEFINE_LAMBDA_OP(CMP_LT_EQ, lhs <= rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		DEFINE_LAMBDA_OP(CMP_GT_EQ, lhs >= rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		
+		DEFINE_LAMBDA_OP(CMP_EQ, lhs == rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		DEFINE_LAMBDA_OP(CMP_NEQ, lhs != rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		
+		DEFINE_LAMBDA_OP(BITWISE_AND, lhs & rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		DEFINE_LAMBDA_OP(BITWISE_XOR, lhs ^ rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		DEFINE_LAMBDA_OP(BITWISE_OR, lhs | rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		
+		DEFINE_LAMBDA_OP(LOGICAL_AND, lhs && rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		DEFINE_LAMBDA_OP(LOGICAL_OR, lhs || rhs, (auto&& lhs, auto&& rhs), (decltype(lhs) lhs, decltype(rhs) rhs))
+		
+		
+		#undef DEFINE_LAMBDA_OP
 	}
 	
 	template<typename X, typename Y, typename Z>
 	class Vec: public detail::VecBase<X, Y, Z> {
 		
 		template<typename, typename, typename> friend class Vec;
-		template<typename, typename, typename> struct VecBase;
+		template<typename, typename, typename, typename> friend struct VecBase;
+		template<typename, typename, typename> friend struct AxisGroupMetaInfo;
 		
 		private:
 		using base = detail::VecBase<X, Y, Z>;
@@ -346,97 +363,114 @@ namespace ink {
 		
 		
 		
-		public: template<typename RVec>
-		requires (SameTemplate<RVec, Vec>)
-		friend constexpr decltype(auto)
-		operator*(Vec const& lhs, RVec const& rhs)
+		private: template<auto Op, bool PreferVoid = false>
+		static constexpr decltype(auto)
+		operate_vecs(auto&& lhs, auto&& rhs)
+		requires requires(decltype(lhs) lhs, decltype(rhs) rhs)
 		{
-			constexpr auto lambda = [](auto&& l, auto&& r) constexpr { return l * r; };
-			return meta::OperateVecs(lambda, lhs, rhs);
+			{detail::ConditionalOp_Binary<Op>(lhs.x, rhs.x)};
+			{detail::ConditionalOp_Binary<Op>(lhs.y, rhs.y)};
+			{detail::ConditionalOp_Binary<Op>(lhs.z, rhs.z)};
+		}
+		{
+			return ink::Vec(
+				detail::ConditionalOp_Binary<Op, PreferVoid>(lhs.x, rhs.x),
+				detail::ConditionalOp_Binary<Op, PreferVoid>(lhs.y, rhs.y),
+				detail::ConditionalOp_Binary<Op, PreferVoid>(lhs.z, rhs.z)
+			);
 		}
 		
+		public: template<typename RX, typename RY, typename RZ>
+		requires requires(Vec lhs, Vec<RX, RY, RZ> rhs)
+		{ operate_vecs<LambdaOps::MUL>(lhs, rhs); }
+		friend constexpr decltype(auto)
+		operator*(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
+		{ return operate_vecs<LambdaOps::MUL>(lhs, rhs); }
+		
 		public: template<typename T>
-		requires (!SameTemplate<T, Vec>)
+		requires(!SameTemplate<Vec, T>)
 		friend constexpr decltype(auto)
 		operator*(Vec const& lhs, T const& rhs)
-		{
-			constexpr auto lambda = [](auto&& l, auto&& r) constexpr { return l * r; };
-			return meta::OperateScalarRight(lambda, lhs, rhs);
-		}
+		{ return operate_vecs<LambdaOps::MUL, true>(lhs, ink::Vec(rhs, rhs, rhs)); }
 		
 		public: template<typename T>
-		requires (!SameTemplate<T, Vec>)
+		requires(!SameTemplate<Vec, T>)
 		friend constexpr decltype(auto)
 		operator*(T const& lhs, Vec const& rhs)
-		{
-			constexpr auto lambda = [](auto&& l, auto&& r) constexpr { return l * r; };
-			return meta::OperateScalarLeft(lambda, lhs, rhs);
-		}
+		{ return operate_vecs<LambdaOps::MUL, true>(ink::Vec(lhs, lhs, lhs), rhs); }
 		
 		
 		
-		public: template<typename RVec>
-		requires (SameTemplate<RVec, Vec>)
+		public: template<typename RX, typename RY, typename RZ>
+		requires requires(Vec lhs, Vec<RX, RY, RZ> rhs)
+		{ operate_vecs<LambdaOps::DIV>(lhs, rhs); }
 		friend constexpr decltype(auto)
-		operator/(Vec const& lhs, RVec const& rhs)
-		{
-			constexpr auto lambda = [](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
-			return meta::OperateVecs(lambda, lhs, rhs);
-		}
+		operator/(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
+		{ return operate_vecs<LambdaOps::DIV>(lhs, rhs); }
 		
 		public: template<typename T>
-		requires (!SameTemplate<T, Vec>)
+		requires(!SameTemplate<Vec, T>)
 		friend constexpr decltype(auto)
 		operator/(Vec const& lhs, T const& rhs)
-		{
-			constexpr auto lambda = [](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
-			return meta::OperateScalarRight(lambda, lhs, rhs);
-		}
+		{ return operate_vecs<LambdaOps::DIV, true>(lhs, ink::Vec(rhs, rhs, rhs)); }
 		
 		public: template<typename T>
-		requires (!SameTemplate<T, Vec>)
+		requires(!SameTemplate<Vec, T>)
 		friend constexpr decltype(auto)
 		operator/(T const& lhs, Vec const& rhs)
-		{
-			constexpr auto lambda = [](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
-			return meta::OperateScalarLeft(lambda, lhs, rhs);
-		}
+		{ return operate_vecs<LambdaOps::DIV, true>(ink::Vec(lhs, lhs, lhs), rhs); }
 		
 		
 		
-		public: template<typename RVec>
-		requires (SameTemplate<RVec, Vec>)
+		public: template<typename RX, typename RY, typename RZ>
+		requires requires(Vec lhs, Vec<RX, RY, RZ> rhs)
+		{ operate_vecs<LambdaOps::MOD>(lhs, rhs); }
 		friend constexpr decltype(auto)
-		operator+(Vec const& lhs, RVec const& rhs)
-		{
-			constexpr auto lambda = [](auto&& l, auto&& r) constexpr { return l + r; };
-			return meta::OperateVecs(lambda, lhs, rhs);
-		}
+		operator%(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
+		{ return operate_vecs<LambdaOps::MOD>(lhs, rhs); }
 		
-		public: friend constexpr decltype(auto)
-		operator+(Vec const& v)
-		{
-			constexpr auto lambda = [](auto&& v) constexpr { return +v; };
-			return meta::OperateUnary(lambda, v);
-		}
-		
-		
-		
-		public: template<typename RVec>
-		requires (SameTemplate<RVec, Vec>)
+		public: template<typename T>
+		requires(!SameTemplate<Vec, T>)
 		friend constexpr decltype(auto)
-		operator-(Vec const& lhs, RVec const& rhs)
+		operator%(Vec const& lhs, T const& rhs)
+		{ return operate_vecs<LambdaOps::MOD, true>(lhs, ink::Vec(rhs, rhs, rhs)); }
+		
+		public: template<typename T>
+		requires(!SameTemplate<Vec, T>)
+		friend constexpr decltype(auto)
+		operator%(T const& lhs, Vec const& rhs)
+		{ return operate_vecs<LambdaOps::MOD, true>(ink::Vec(lhs, lhs, lhs), rhs); }
+		
+		
+		
+		public: template<typename RX, typename RY, typename RZ>
+		requires requires(Vec lhs, Vec<RX, RY, RZ> rhs)
+		{ operate_vecs<LambdaOps::ADD>(lhs, rhs); }
+		friend constexpr decltype(auto)
+		operator+(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
+		{ return operate_vecs<LambdaOps::ADD>(lhs, rhs); }
+		
+		public:
+		friend constexpr decltype(auto)
+		operator-(Vec const& vec)
+		// requires requires(Vec vec) {
+		// 	detail::ConditionalOp_Unary<LambdaOps::UNARY_ADD>(vec.x);
+		// 	detail::ConditionalOp_Unary<LambdaOps::UNARY_ADD>(vec.y);
+		// 	detail::ConditionalOp_Unary<LambdaOps::UNARY_ADD>(vec.z);
+		// }
 		{
-			constexpr auto lambda = [](auto&& l, auto&& r) constexpr { return l - r; };
-			return meta::OperateVecs(lambda, lhs, rhs);
+			return ink::Vec(
+				detail::ConditionalOp_Unary<LambdaOps::UNARY_SUB>(vec.x),
+				detail::ConditionalOp_Unary<LambdaOps::UNARY_SUB>(vec.y),
+				detail::ConditionalOp_Unary<LambdaOps::UNARY_SUB>(vec.z));
 		}
 		
-		public: friend constexpr decltype(auto)
-		operator-(Vec const& v)
-		{
-			constexpr auto lambda = [](auto&& v) constexpr { return -v; };
-			return meta::OperateUnary(lambda, v);
-		}
+		public: template<typename RX, typename RY, typename RZ>
+		requires requires(Vec lhs, Vec<RX, RY, RZ> rhs)
+		{ operate_vecs<LambdaOps::SUB>(lhs, rhs); }
+		friend constexpr decltype(auto)
+		operator-(Vec const& lhs, Vec<RX, RY, RZ> const& rhs)
+		{ return operate_vecs<LambdaOps::SUB>(lhs, rhs); }
 		
 	};
 	
