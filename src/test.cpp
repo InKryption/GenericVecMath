@@ -2,8 +2,26 @@
 #include <cstdlib>
 #include <tuple>
 #include <type_traits>
+#include <cmath>
 
 namespace ink {
+	
+	namespace detail {
+		
+		template<typename T, typename U>
+		struct SameTemplate_t: std::false_type {};
+		
+		template<template<typename...> typename Template, typename... T, typename... U>
+		struct SameTemplate_t<Template<T...>, Template<U...>>: std::true_type {};
+		
+		template<typename T, typename U>
+		concept SameTemplate = SameTemplate_t<std::remove_cvref_t<T>, std::remove_cvref_t<U>>::value;
+		
+	}
+	
+	using detail::SameTemplate;
+	
+	template<typename X, typename Y, typename Z> class Vec;
 	
 	namespace detail {
 		
@@ -29,6 +47,10 @@ namespace ink {
 		template<typename X, typename Y, typename Z>
 		struct AxisGroup {
 			
+			template<typename, typename, typename> friend class Vec;
+			template<typename, typename, typename> friend struct VecBase;
+			template<typename, typename, typename> friend struct AxisGroup;
+			
 			public: using XYZ = XYZ;
 			
 			public: template<XYZ tag>
@@ -43,7 +65,7 @@ namespace ink {
 			
 			template<XYZ tag> using Axis = Axis<value_type<tag>, tag>;
 			
-			private: static constexpr auto
+			private: static constexpr size_t
 				sx = [] () { if constexpr(std::is_void_v<X>) { return 1; } else { return sizeof(X); } }(),
 				sy = [] () { if constexpr(std::is_void_v<Y>) { return 1; } else { return sizeof(Y); } }(),
 				sz = [] () { if constexpr(std::is_void_v<Z>) { return 1; } else { return sizeof(Z); } }();
@@ -62,7 +84,7 @@ namespace ink {
 							(IndexOfAxis<XYZ::Y> == i) ? XYZ::Y :
 							(IndexOfAxis<XYZ::Z> == i) ? XYZ::Z : static_cast<XYZ>(-1);
 			
-			template<size_t i> static constexpr decltype(auto)
+			private: template<size_t i> static constexpr decltype(auto)
 			fwd_value(auto&& x, auto&& y, auto&& z) {
 				if constexpr(XYZ::X == AxisAtIndex<i>) return x;
 				if constexpr(XYZ::Y == AxisAtIndex<i>) return y;
@@ -82,6 +104,11 @@ namespace ink {
 				public base1,
 				public base2
 			{
+				
+				template<typename, typename, typename> friend class Vec;
+				template<typename, typename, typename> friend struct AxisGroup;
+				template<typename ox, typename oy, typename oz> friend struct AxisGroup<ox,oy,oz>::VecBase;
+				
 				public: constexpr
 				VecBase()
 				noexcept( noexcept(base0()) && noexcept(base1()) && noexcept(base2()) )
@@ -102,25 +129,54 @@ namespace ink {
 			
 		};
 		
+		template<auto Op, bool PreferVoid = false>
+		static constexpr decltype(auto)
+		binary_op(auto&& lhs, auto&& rhs) {
+			using Lhs = std::remove_cvref_t<decltype(lhs)>;
+			using Rhs = std::remove_cvref_t<decltype(rhs)>;
+			
+			constexpr bool
+				lEmpty = std::same_as<detail::Empty, Lhs>,
+				rEmpty = std::same_as<detail::Empty, Rhs>;
+			
+			if constexpr(		(lEmpty && rEmpty)
+			|| (PreferVoid &&	(lEmpty || rEmpty)))	{ return nullptr; }
+			else if constexpr(!lEmpty && !rEmpty)		{ return Op(lhs, rhs); }
+			else if constexpr(!lEmpty)					{ return lhs; }
+			else if constexpr(!rEmpty)					{ return rhs; }
+		}
+		
+		template<auto Op>
+		static constexpr decltype(auto)
+		unary_op(auto&& v) {
+			using V = std::remove_cvref_t<decltype(v)>;
+			constexpr bool
+				vEmpty = std::same_as<detail::Empty, V>;
+			if constexpr(vEmpty) { return nullptr; }
+			else return Op(v);
+		}
+		
 	}
 	
 	template<typename X = void, typename Y = X, typename Z = void> class Vec;
+	
+	template<typename X, typename Y, typename Z> Vec(Vec<X,Y,Z>) -> Vec<X, Y, Z>;
+	
 	Vec() -> Vec<void, void, void>;
 	template<typename X, typename Y, typename Z> Vec(X, Y, Z) -> Vec<
 		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
 		std::conditional_t<(std::same_as<Y, std::nullptr_t>), void, Y>,
-		std::conditional_t<(std::same_as<Z, std::nullptr_t>), void, Z>
-	>;
+		std::conditional_t<(std::same_as<Z, std::nullptr_t>), void, Z>	>;
+	
 	template<typename X, typename Y> Vec(X, Y) -> Vec<
 		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
 		std::conditional_t<(std::same_as<Y, std::nullptr_t>), void, Y>,
-		void
-	>;
+		void	>;
+	
 	template<typename X> Vec(X) -> Vec<
 		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
-		void, void
-	>;
-	
+		void, void	>;
+		
 	template<typename X, typename Y, typename Z>
 	class Vec: public detail::AxisGroup<X, Y, Z>::VecBase {
 		
@@ -177,22 +233,252 @@ namespace ink {
 		
 		public: template<typename OX, typename OY, typename OZ>
 		friend constexpr decltype(auto)
-		operator*(Vec const& lhs, Vec<OX, OY, OZ> const& rhs)
-		{
-			constexpr decltype(auto) conditional = []() {};
-			
-			decltype(auto) x_out = []() {}();
-			decltype(auto) y_out = []() {}();
-			decltype(auto) z_out = []() {}();
+		operator*(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
+			constexpr decltype(auto) mul =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs * rhs; };
+			return ink::Vec(
+				binary_op<mul>(lhs.x, rhs.x),
+				binary_op<mul>(lhs.y, rhs.y),
+				binary_op<mul>(lhs.z, rhs.z)
+			);
+		}
+		
+		public: template<typename T>
+		friend constexpr decltype(auto)
+		operator*(Vec const& lhs, T const& rhs) {
+			constexpr decltype(auto) mul =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs * rhs; };
+			return ink::Vec(
+				binary_op<mul, true>(lhs.x, rhs),
+				binary_op<mul, true>(lhs.y, rhs),
+				binary_op<mul, true>(lhs.z, rhs)
+			);
+		}
+		
+		public: template<typename T>
+		friend constexpr decltype(auto)
+		operator*(T const& lhs, Vec const& rhs) {
+			constexpr decltype(auto) mul =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs * rhs; };
+			return ink::Vec(
+				binary_op<mul, true>(lhs, rhs.x),
+				binary_op<mul, true>(lhs, rhs.y),
+				binary_op<mul, true>(lhs, rhs.z)
+			);
+		}
+		
+		
+		
+		public: template<typename OX, typename OY, typename OZ>
+		friend constexpr decltype(auto)
+		operator/(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
+			constexpr decltype(auto) div =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
+			return ink::Vec(
+				binary_op<div>(lhs.x, rhs.x),
+				binary_op<div>(lhs.y, rhs.y),
+				binary_op<div>(lhs.z, rhs.z)
+			);
+		}
+		
+		public: template<typename T>
+		friend constexpr decltype(auto)
+		operator/(Vec const& lhs, T const& rhs) {
+			constexpr decltype(auto) div =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
+			return ink::Vec(
+				binary_op<div, true>(lhs.x, rhs),
+				binary_op<div, true>(lhs.y, rhs),
+				binary_op<div, true>(lhs.z, rhs)
+			);
+		}
+		
+		public: template<typename T>
+		friend constexpr decltype(auto)
+		operator/(T const& lhs, Vec const& rhs) {
+			constexpr decltype(auto) div =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs / rhs; };
+			return ink::Vec(
+				detail::binary_op<div, true>(lhs, rhs.x),
+				detail::binary_op<div, true>(lhs, rhs.y),
+				detail::binary_op<div, true>(lhs, rhs.z)
+			);
+		}
+		
+		
+		
+		public: template<typename OX, typename OY, typename OZ>
+		friend constexpr decltype(auto)
+		operator%(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
+			constexpr decltype(auto) mod =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs % rhs; };
+			return ink::Vec(
+				binary_op<mod>(lhs.x, rhs.x),
+				binary_op<mod>(lhs.y, rhs.y),
+				binary_op<mod>(lhs.z, rhs.z)
+			);
+		}
+		
+		public: template<typename T> requires(!SameTemplate<T, Vec>)
+		friend constexpr decltype(auto)
+		operator%(Vec const& lhs, T const& rhs) {
+			constexpr decltype(auto) mod =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs % rhs; };
+			return ink::Vec(
+				binary_op<mod, true>(lhs.x, rhs),
+				binary_op<mod, true>(lhs.y, rhs),
+				binary_op<mod, true>(lhs.z, rhs)
+			);
+		}
+		
+		public: template<typename T> requires(!SameTemplate<T, Vec>)
+		friend constexpr decltype(auto)
+		operator%(T const& lhs, Vec const& rhs) {
+			constexpr decltype(auto) mod =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs % rhs; };
+			return ink::Vec(
+				binary_op<mod, true>(lhs, rhs.x),
+				binary_op<mod, true>(lhs, rhs.y),
+				binary_op<mod, true>(lhs, rhs.z)
+			);
+		}
+		
+		
+		
+		public: template<typename OX, typename OY, typename OZ>
+		friend constexpr decltype(auto)
+		operator+(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
+			constexpr decltype(auto) add =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs + rhs; };
+			return ink::Vec(
+				binary_op<add>(lhs.x, rhs.x),
+				binary_op<add>(lhs.y, rhs.y),
+				binary_op<add>(lhs.z, rhs.z)
+			);
+		}
+		
+		public: friend constexpr decltype(auto)
+		operator+(Vec const& vec) {
+			constexpr decltype(auto) plus =
+			[](auto&& v) constexpr { return +v; };
+			return ink::Vec(
+				unary_op<plus>(vec.x),
+				unary_op<plus>(vec.y),
+				unary_op<plus>(vec.z)
+			);
+		}
+		
+		
+		
+		public: template<typename OX, typename OY, typename OZ>
+		friend constexpr decltype(auto)
+		operator-(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
+			constexpr decltype(auto) sub =
+			[](auto&& lhs, auto&& rhs) constexpr { return lhs - rhs; };
+			return ink::Vec(
+				binary_op<sub>(lhs.x, rhs.x),
+				binary_op<sub>(lhs.y, rhs.y),
+				binary_op<sub>(lhs.z, rhs.z)
+			);
+		}
+		
+		public: friend constexpr decltype(auto)
+		operator-(Vec const& vec) {
+			constexpr decltype(auto) minus =
+			[](auto&& v) constexpr { return -v; };
+			return ink::Vec(
+				unary_op<minus>(vec.x),
+				unary_op<minus>(vec.y),
+				unary_op<minus>(vec.z)
+			);
 		}
 		
 	};
+	
+	static constexpr decltype(auto)
+	fmod(auto&& lhs, auto&& rhs) requires(!SameTemplate<Vec<void>,decltype(lhs)> && !SameTemplate<Vec<void>,decltype(rhs)>)
+	{ return lhs - (rhs * static_cast<size_t>(lhs/rhs)); }
+	
+	static constexpr decltype(auto)
+	fmod(SameTemplate<Vec<void>> auto&& lhs, SameTemplate<Vec<void>> auto&& rhs) {
+		if constexpr(
+				std::floating_point<decltype(rhs.x)>
+			||	std::floating_point<decltype(rhs.y)>
+			||	std::floating_point<decltype(rhs.x)>
+			||	std::floating_point<decltype(lhs.x)>
+			||	std::floating_point<decltype(lhs.y)>
+			||	std::floating_point<decltype(lhs.z)>
+		) {
+			constexpr decltype(auto) mod =
+			[](auto&& lhs, auto&& rhs) constexpr
+			{ return lhs - (rhs * static_cast<size_t>(lhs/rhs)); };
+			return ink::Vec(
+				detail::binary_op<mod>(lhs.x, rhs.x),
+				detail::binary_op<mod>(lhs.y, rhs.y),
+				detail::binary_op<mod>(lhs.z, rhs.z)
+			);
+		}
+		else
+		{ return lhs % rhs; }
+		
+	}
+	
+	template<typename T> requires(!SameTemplate<T, Vec<void>>)
+	static constexpr decltype(auto)
+	fmod(SameTemplate<Vec<void>> auto&& lhs, T const& rhs) {
+		
+		if constexpr(
+				std::floating_point<T>
+			||	std::floating_point<decltype(lhs.x)>
+			||	std::floating_point<decltype(lhs.y)>
+			||	std::floating_point<decltype(lhs.z)>
+		) {
+			constexpr decltype(auto) mod =
+			[](auto&& lhs, auto&& rhs) constexpr
+			{ return lhs - (rhs * static_cast<size_t>(lhs/rhs)); };
+			return ink::Vec(
+				detail::binary_op<mod, true>(lhs.x, rhs),
+				detail::binary_op<mod, true>(lhs.y, rhs),
+				detail::binary_op<mod, true>(lhs.z, rhs)
+			);
+		}
+		else
+		{ return lhs % rhs; }
+		
+	}
+	
+	template<typename T> requires(!SameTemplate<T, Vec<void>>)
+	static constexpr decltype(auto)
+	fmod(T const& lhs, SameTemplate<Vec<void>> auto&& rhs) {
+		if constexpr(
+				std::floating_point<T>
+			||	std::floating_point<decltype(rhs.x)>
+			||	std::floating_point<decltype(rhs.y)>
+			||	std::floating_point<decltype(rhs.z)>
+		) {
+			constexpr decltype(auto) mod =
+			[](auto&& lhs, auto&& rhs) constexpr
+			{ return lhs - (rhs * static_cast<size_t>(lhs/rhs)); };
+			return ink::Vec(
+				detail::binary_op<mod, true>(lhs, rhs.x),
+				detail::binary_op<mod, true>(lhs, rhs.y),
+				detail::binary_op<mod, true>(lhs, rhs.z)
+			);
+		}
+		else
+		{ return lhs % rhs; }
+		
+	}
 	
 }
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
-	ink::Vec m{3};
+	constexpr ink::Vec vec1(2.5, 7.5);
+	constexpr ink::Vec vec2(3, 5, 55);
 	
-	return 0;
+	vec1.z;
+	
+	printf("%f %f %f\n", b.x, b.y, ink::fmod(7.5, 2));
+	
 }
