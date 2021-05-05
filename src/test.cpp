@@ -11,13 +11,18 @@ namespace ink {
 		
 		template<typename T, XYZ tag> struct Axis;
 		
-		template<typename T> struct Axis<T, XYZ::X> { T x; };
-		template<typename T> struct Axis<T, XYZ::Y> { T y; };
-		template<typename T> struct Axis<T, XYZ::Z> { T z; };
+		template<class T> struct Axis<T, XYZ::X>
+		{ T x; constexpr Axis(auto&& x): x(x) {} constexpr Axis(std::nullptr_t = {}) requires(std::default_initializable<T>): x() {} };
 		
-		template<> struct Axis<void, XYZ::X> { constexpr Axis(std::nullptr_t = {}) {} static constexpr auto x{nullptr}; };
-		template<> struct Axis<void, XYZ::Y> { constexpr Axis(std::nullptr_t = {}) {} static constexpr auto y{nullptr}; };
-		template<> struct Axis<void, XYZ::Z> { constexpr Axis(std::nullptr_t = {}) {} static constexpr auto z{nullptr}; };
+		template<class T> struct Axis<T, XYZ::Y>
+		{ T y; constexpr Axis(auto&& y): y(y) {} constexpr Axis(std::nullptr_t = {}) requires(std::default_initializable<T>): y() {} };
+		
+		template<class T> struct Axis<T, XYZ::Z>
+		{ T z; constexpr Axis(auto&& z): z(z) {} constexpr Axis(std::nullptr_t = {}) requires(std::default_initializable<T>): z() {} };
+		
+		template<> struct Axis<void, XYZ::X> { constexpr Axis(std::nullptr_t = {}) {} static constexpr struct {} x{}; };
+		template<> struct Axis<void, XYZ::Y> { constexpr Axis(std::nullptr_t = {}) {} static constexpr struct {} y{}; };
+		template<> struct Axis<void, XYZ::Z> { constexpr Axis(std::nullptr_t = {}) {} static constexpr struct {} z{}; };
 		
 		template<typename X, typename Y, typename Z>
 		struct AxisGroup {
@@ -86,7 +91,7 @@ namespace ink {
 				public: constexpr
 				VecBase(auto&& x, auto&& y, auto&& z)
 				noexcept( noexcept(baseX(x)) && noexcept(baseY(y)) && noexcept(baseZ(z)) )
-				requires( std::constructible_from<baseX, decltype(x)> && std::constructible_from<baseY, decltype(y)> && std::constructible_from<baseZ, decltype(z)> )
+				requires(std::constructible_from<baseX, decltype(x)> && std::constructible_from<baseY, decltype(y)> && std::constructible_from<baseZ, decltype(z)>)
 				:	base0(fwd_value<0>(x, y, z)),
 					base1(fwd_value<1>(x, y, z)),
 					base2(fwd_value<2>(x, y, z)) {}
@@ -95,38 +100,86 @@ namespace ink {
 			
 		};
 		
-		template<typename X, typename Y, typename Z>
-		class Vec: public AxisGroup<X, Y, Z>::VecBase {
-			
-			private: using XYZ = detail::XYZ;
-			private: using meta = AxisGroup<X, Y, Z>;
-			private: using base = typename meta::VecBase;
-			
-			public: constexpr
-			Vec() noexcept(base()) requires(std::default_initializable<base>)
-			: base() {}
-			
-			public: template<
-				std::convertible_to<typename meta::real_type<XYZ::X>> OX,
-				std::convertible_to<typename meta::real_type<XYZ::Y>> OY,
-				std::convertible_to<typename meta::real_type<XYZ::Z>> OZ
-			> constexpr
-			Vec(OX&& x, OY&& y, OZ&& z)
-			: base(std::forward<OX>(x), std::forward<OY>(y), std::forward<OZ>(z)) {}
-			
-		};
-		
-		constexpr Vec<int, char, size_t> f{1,2,3};
-		constexpr auto b = f.y;
-		
-		
 	}
+	
+	template<typename X = void, typename Y = X, typename Z = void> class Vec;
+	Vec() -> Vec<void, void, void>;
+	template<typename X, typename Y, typename Z> Vec(X, Y, Z) -> Vec<
+		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
+		std::conditional_t<(std::same_as<Y, std::nullptr_t>), void, Y>,
+		std::conditional_t<(std::same_as<Z, std::nullptr_t>), void, Z>
+	>;
+	template<typename X, typename Y> Vec(X, Y) -> Vec<
+		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
+		std::conditional_t<(std::same_as<Y, std::nullptr_t>), void, Y>,
+		void
+	>;
+	template<typename X> Vec(X) -> Vec<
+		std::conditional_t<(std::same_as<X, std::nullptr_t>), void, X>,
+		void, void
+	>;
+	
+	template<typename X, typename Y, typename Z>
+	class Vec: public detail::AxisGroup<X, Y, Z>::VecBase {
+		
+		private: using XYZ = detail::XYZ;
+		private: using meta = detail::AxisGroup<X, Y, Z>;
+		private: using base = typename meta::VecBase;
+		
+		public: constexpr
+		Vec() noexcept(noexcept(base())) requires(std::default_initializable<base>)
+		: base() {}
+		
+		public: constexpr
+		Vec(auto&& x, auto&& y, auto&& z)
+		noexcept(noexcept(base(x, y, z)))
+		: base(x, y, z) {}
+		
+		public: constexpr
+		Vec(auto&& x, auto&& y)
+		noexcept( noexcept(base(x, y, nullptr)) )
+		requires(std::is_void_v<Z> || std::default_initializable<Z>)
+		: base(x, y, nullptr) {}
+		
+		public: constexpr
+		Vec(auto&& x, auto&& z)
+		noexcept( noexcept(base(x, nullptr, z)) )
+		requires(!std::is_void_v<X> && std::is_void_v<Y> && !std::is_void_v<Z>)
+		: base(x, nullptr, z) {}
+		
+		public: constexpr
+		Vec(auto&& y, auto&& z)
+		noexcept( noexcept(base(nullptr, y, z)) )
+		requires(std::is_void_v<X> && !std::is_void_v<Y> && !std::is_void_v<Z>)
+		: base(nullptr, y, z) {}
+		
+		public: constexpr explicit
+		Vec(auto&& x)
+		noexcept( noexcept(base(x, nullptr, nullptr)) )
+		requires( (std::is_void_v<Y> || std::default_initializable<Y>) && (std::is_void_v<Z> || std::default_initializable<Z>) )
+		: base(x, nullptr, nullptr) {}
+		
+		public: constexpr explicit
+		Vec(auto&& y)
+		noexcept( noexcept(base(nullptr, y, nullptr)) )
+		requires( std::is_void_v<X> && !std::is_void_v<Y> && (std::is_void_v<Z> || std::default_initializable<Z>) )
+		: base(nullptr, y, nullptr) {}
+		
+		public: constexpr explicit
+		Vec(auto&& z)
+		noexcept( noexcept(base(nullptr, nullptr, z)) )
+		requires( std::is_void_v<X> && std::is_void_v<Y> && !std::is_void_v<Z> )
+		: base(nullptr, nullptr, z) {}
+		
+		
+		
+	};
 	
 }
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
-	
+	ink::Vec m{3};
 	
 	return 0;
 }
