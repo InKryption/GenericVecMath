@@ -20,9 +20,11 @@ namespace ink {
 		template<class T> struct Axis<T, XYZ::Z>
 		{ T z; constexpr Axis(auto&& z): z(z) {} constexpr Axis(std::nullptr_t = {}) requires(std::default_initializable<T>): z() {} };
 		
-		template<> struct Axis<void, XYZ::X> { constexpr Axis(std::nullptr_t = {}) {} static constexpr struct {} x{}; };
-		template<> struct Axis<void, XYZ::Y> { constexpr Axis(std::nullptr_t = {}) {} static constexpr struct {} y{}; };
-		template<> struct Axis<void, XYZ::Z> { constexpr Axis(std::nullptr_t = {}) {} static constexpr struct {} z{}; };
+		struct Empty {};
+		
+		template<> struct Axis<void, XYZ::X> { constexpr Axis(std::nullptr_t = {}) {} static constexpr Empty x{}; };
+		template<> struct Axis<void, XYZ::Y> { constexpr Axis(std::nullptr_t = {}) {} static constexpr Empty y{}; };
+		template<> struct Axis<void, XYZ::Z> { constexpr Axis(std::nullptr_t = {}) {} static constexpr Empty z{}; };
 		
 		template<typename X, typename Y, typename Z>
 		struct AxisGroup {
@@ -172,6 +174,17 @@ namespace ink {
 		: base(nullptr, nullptr, z) {}
 		
 		
+		
+		public: template<typename OX, typename OY, typename OZ>
+		friend constexpr decltype(auto)
+		operator*(Vec const& lhs, Vec<OX, OY, OZ> const& rhs)
+		{
+			constexpr decltype(auto) conditional = []() {};
+			
+			decltype(auto) x_out = []() {}();
+			decltype(auto) y_out = []() {}();
+			decltype(auto) z_out = []() {}();
+		}
 		
 	};
 	
