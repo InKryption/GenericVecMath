@@ -2,6 +2,7 @@
 #define INK_MATH_VECTOR_HEADER_FILE_GUARD
 
 #include <cstdlib>
+#include <cstdint>
 #include <utility>
 #include <type_traits>
 #include <cmath>
@@ -217,6 +218,10 @@ namespace ink {
 		private: using base = typename meta::VecBase;
 		
 		public: constexpr
+		Vec(SameTemplate<Vec> auto&& other)
+		: base(other.x, other.y, other.z) {}
+		
+		public: constexpr
 		Vec() noexcept(noexcept(base())) requires(std::default_initializable<base>)
 		: base() {}
 		
@@ -263,6 +268,7 @@ namespace ink {
 		
 		
 		
+		// Returns the dot product of the two given vectors.
 		public: template<typename OX, typename OY, typename OZ>
 		friend constexpr decltype(auto)
 		dot(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
@@ -276,10 +282,27 @@ namespace ink {
 			return xyz;
 		}
 		
-		public: friend constexpr decltype(auto)
-		mag2(Vec const& v) {
-			return dot(v, v);
+		// Returns the cross vector product of the two given vectors.
+		public: template<typename OX, typename OY, typename OZ>
+		friend constexpr decltype(auto)
+		cross(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
+			const decltype(auto) x_out = detail::binary_op<Ops::SUB, true>(
+				detail::binary_op<Ops::MUL, false, detail::Empty>(lhs.y, rhs.z),
+				detail::binary_op<Ops::MUL, false, detail::Empty>(lhs.z, rhs.y));
+			const decltype(auto) y_out = detail::binary_op<Ops::SUB, true>(
+				detail::binary_op<Ops::MUL, false, detail::Empty>(lhs.z, rhs.x),
+				detail::binary_op<Ops::MUL, false, detail::Empty>(lhs.x, rhs.z));
+			const decltype(auto) z_out = detail::binary_op<Ops::SUB, true>(
+				detail::binary_op<Ops::MUL, false, detail::Empty>(lhs.x, rhs.y),
+				detail::binary_op<Ops::MUL, false, detail::Empty>(lhs.y, rhs.x));
+			return ink::Vec(x_out, y_out, z_out);
 		}
+		
+		// Returns the value of the magnitude quared. This can be passed into whatever square root function which is desired.
+		public: friend constexpr decltype(auto)
+		mag2(Vec const& v)
+		{ return dot(v, v);	}
+		
 		
 	};
 	
@@ -486,6 +509,36 @@ namespace ink {
 			detail::binary_op<mod, true>(lhs, rhs.y),
 			detail::binary_op<mod, true>(lhs, rhs.z)
 		);
+	}
+	
+	
+	
+	// Ripped code from the wikipedia page on Q_rsqrt.
+	inline float Q_rsqrt( float number )
+	{
+		constexpr float threehalfs = 1.5F;
+		const float x2 = number * 0.5F;
+		
+		union { float f; uint32_t i; }
+		conv  = { .f = number };
+		
+		conv.i = 0x5f3759df - ( conv.i >> 1 );
+		conv.f *= threehalfs - ( x2 * conv.f * conv.f );
+		return conv.f;
+	}
+	
+	// Double overload utilising the double-specific magic number.
+	inline double Q_rsqrt( double number )
+	{
+		constexpr double threehalfs = 1.5;
+		const float x2 = number * 0.5;
+		
+		union { double f; uint64_t i; }
+		conv  = { .f = number };
+		
+		conv.i = 0x5fe6eb50c7b537a9 - ( conv.i >> 1 );
+		conv.f *= threehalfs - ( x2 * conv.f * conv.f );
+		return conv.f;
 	}
 	
 }
