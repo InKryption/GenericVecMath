@@ -11,8 +11,8 @@
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
-	constexpr ink::Vec vec1(3);
-	constexpr ink::Vec vec2(5);
+	constexpr ink::Vec vec1(3,2,1);
+	constexpr ink::Vec vec2(5,2,1);
 	
 	int x = 0, y = 0, z = 0;
 	
