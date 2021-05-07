@@ -336,6 +336,9 @@ namespace ink {
 		[[maybe_unused]] static constexpr decltype(auto)
 		operator+(Empty, Empty) noexcept { return Empty(); }
 		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator+(Empty) noexcept { return Empty(); }
+		
 		
 		
 		[[maybe_unused]] static constexpr decltype(auto)
@@ -350,6 +353,9 @@ namespace ink {
 		
 		[[maybe_unused]] static constexpr decltype(auto)
 		operator-(Empty, Empty) noexcept { return Empty(); }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator-(Empty) noexcept { return Empty(); }
 		
 		
 		
@@ -762,6 +768,21 @@ namespace ink {
 		
 		
 		
+		template<typename X, typename Y, typename Z, class OVec = Vec<X, Y, Z>>
+		requires(
+				ink::concepts::can_unary_add<typename OVec::value_type_x>
+			&&	ink::concepts::can_unary_add<typename OVec::value_type_y>
+			&&	ink::concepts::can_unary_add<typename OVec::value_type_z>)
+		static constexpr decltype(auto)
+		operator+(Vec<X, Y, Z> const& vec)
+		noexcept(
+				ink::concepts::can_unary_add<typename OVec::value_type_x, true>
+			&&	ink::concepts::can_unary_add<typename OVec::value_type_y, true>
+			&&	ink::concepts::can_unary_add<typename OVec::value_type_x, true>)
+		{ return ink::Vec(+vec.x, +vec.y, +vec.z); }
+		
+		
+		
 		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
 			class LVec = Vec<LX, LY, LZ>,
 			class RVec = Vec<RX, RY, RZ> >
@@ -770,6 +791,21 @@ namespace ink {
 		operator-(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
 		noexcept(Vec_CanDoBinaryOp<concepts::can_sub_t, LVec, RVec, true>)
 		{ return ink::Vec(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z); }
+		
+		
+		
+		template<typename X, typename Y, typename Z, class OVec = Vec<X, Y, Z>>
+		requires(
+				ink::concepts::can_unary_sub<typename OVec::value_type_x>
+			&&	ink::concepts::can_unary_sub<typename OVec::value_type_y>
+			&&	ink::concepts::can_unary_sub<typename OVec::value_type_z>)
+		static constexpr decltype(auto)
+		operator-(Vec<X, Y, Z> const& vec)
+		noexcept(
+				ink::concepts::can_unary_sub<typename OVec::value_type_x, true>
+			&&	ink::concepts::can_unary_sub<typename OVec::value_type_y, true>
+			&&	ink::concepts::can_unary_sub<typename OVec::value_type_z, true>)
+		{ return ink::Vec(-vec.x, -vec.y, -vec.z); }
 		
 		
 		

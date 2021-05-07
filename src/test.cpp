@@ -3,11 +3,11 @@
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
-	constexpr ink::Vec vec1(nullptr,nullptr,30);
-	constexpr ink::Vec vec2(4,nullptr,15);
-	constexpr ink::Vec<void, void, int> vec3((vec1 / 4) * 1.8);
+	constexpr ink::Vec vec1(10, nullptr, 30);
+	constexpr ink::Vec vec2(4, 3, 15);
+	constexpr ink::Vec vec3((vec1 / 4) * 1.5);
 	
-	constexpr auto bvec = vec1 || vec2;
+	constexpr auto bvec = +vec1;
 	
 	(void)vec1;
 	(void)vec2;
