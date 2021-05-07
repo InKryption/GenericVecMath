@@ -311,7 +311,12 @@ namespace ink {
 	
 	namespace generic_vec {
 		
-		// Empty struct which acts as a 'null' type in the Vec class, and can be targeted to achieve customized behaviour for other types.
+		// Empty struct which acts as a 'null' type in the Vec class.
+		// An unrelated type can overload an operator to interact with it to achieve
+		// desired overriding behaviour. That is to say, e.g., if a type is overloaded to multiply (operator*)
+		// with 'Empty' to return its default constructor, or return Empty/nullptr, or some other
+		// type. It interacts with all arithmetic/fundamental types as '0'. Meaning, e.g., you can't
+		// divide by empty.
 		struct Empty {
 			template<typename,typename,typename> friend class Vec;
 			
@@ -319,7 +324,7 @@ namespace ink {
 			Empty(std::nullptr_t = {})
 			noexcept {}
 			
-			private: template<typename T> requires(std::default_initializable<T>) constexpr explicit
+			private: template<typename T> requires(std::default_initializable<T>) constexpr
 			operator T() const noexcept(noexcept(T())) { return T(); }
 		};
 		
