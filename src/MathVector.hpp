@@ -728,9 +728,10 @@ namespace ink {
 			: base(nullptr, std::forward<OY>(vy), std::forward<OZ>(vz)) {}
 			
 			public: template<typename OX, typename OY, typename OZ>
-			requires(std::is_reference_v<X> || std::is_reference_v<Y> || std::is_reference_v<Z>)
 			constexpr decltype(auto)
-			operator=(Vec<OX, OY, OZ> const& other) {
+			operator=(Vec<OX, OY, OZ> const& other)
+			requires(std::is_reference_v<X> || std::is_reference_v<Y> || std::is_reference_v<Z>)
+			{
 				this->x = static_cast<std::remove_reference_t<value_type_x>>(other.x);
 				this->y = static_cast<std::remove_reference_t<value_type_y>>(other.y);
 				this->z = static_cast<std::remove_reference_t<value_type_z>>(other.z);

@@ -7,10 +7,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	// constexpr ink::Vec vec2(10, nullptr, 20);
 	// constexpr ink::Vec vec3 = vec1 * vec2;
 	
-	int x, y;
-	ink::Vec<int&, int&>(x,y) = ink::Vec{57, 42};
-	
-	printf("%i %i\n", x, y);
+	ink::Vec m(1,2,3);
+	m.operator=(ink::Vec(3,2,4));
 	
 	return 0;
 }
