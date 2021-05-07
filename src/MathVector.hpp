@@ -369,6 +369,10 @@ namespace ink {
 		{ return 0 / v; }
 		
 		[[maybe_unused]] static constexpr decltype(auto)
+		operator/(auto v, Empty) noexcept
+		requires(std::is_arithmetic_v<std::remove_cvref_t<decltype(v)>>) = delete;
+		
+		[[maybe_unused]] static constexpr decltype(auto)
 		operator/(Empty, Empty) noexcept { return Empty(); }
 		
 		
@@ -602,15 +606,38 @@ namespace ink {
 	}
 	
 	using generic_vec::Vec;
+	using generic_vec::Empty;
 	
 	namespace generic_vec {
 		
 		template<typename T> concept IsVec = concepts::same_template<T, Vec<void>>;
 		template<template<typename,typename,bool> typename Constraint, typename Lhs, typename Rhs = Lhs, bool MustBeNoexcept = false>
 		concept Vec_CanDoBinaryOp = IsVec<Lhs> && IsVec<Rhs>
-			&&	Constraint<typename Lhs::value_type_x, typename Lhs::value_type_x, MustBeNoexcept>::value
-			&&	Constraint<typename Lhs::value_type_y, typename Lhs::value_type_y, MustBeNoexcept>::value
-			&&	Constraint<typename Lhs::value_type_z, typename Lhs::value_type_z, MustBeNoexcept>::value;
+			&&	Constraint<typename std::remove_cvref_t<Lhs>::value_type_x, typename std::remove_cvref_t<Lhs>::value_type_x, MustBeNoexcept>::value
+			&&	Constraint<typename std::remove_cvref_t<Lhs>::value_type_y, typename std::remove_cvref_t<Lhs>::value_type_y, MustBeNoexcept>::value
+			&&	Constraint<typename std::remove_cvref_t<Lhs>::value_type_z, typename std::remove_cvref_t<Lhs>::value_type_z, MustBeNoexcept>::value;
+		
+		template<template<typename,typename,bool> typename Constraint, typename Lhs, typename Rhs, bool MustBeNoexcept = false>
+		concept VecCanDoScalarOp =
+			(	(IsVec<Lhs>) && (!IsVec<Rhs>)
+			&&	(Constraint<typename Lhs::value_type_x, Rhs, MustBeNoexcept>::value || std::same_as<std::remove_cvref_t<typename Lhs::value_type_x>, Empty>)
+			&&	(Constraint<typename Lhs::value_type_y, Rhs, MustBeNoexcept>::value || std::same_as<std::remove_cvref_t<typename Lhs::value_type_y>, Empty>)
+			&&	(Constraint<typename Lhs::value_type_z, Rhs, MustBeNoexcept>::value || std::same_as<std::remove_cvref_t<typename Lhs::value_type_z>, Empty>))	||
+			(	(!IsVec<Lhs>) && (IsVec<Rhs>)
+			&&	(Constraint<Lhs, typename Rhs::value_type_x, MustBeNoexcept>::value || std::same_as<std::remove_cvref_t<typename Rhs::value_type_x>, Empty>)
+			&&	(Constraint<Lhs, typename Rhs::value_type_y, MustBeNoexcept>::value || std::same_as<std::remove_cvref_t<typename Rhs::value_type_y>, Empty>)
+			&&	(Constraint<Lhs, typename Rhs::value_type_z, MustBeNoexcept>::value || std::same_as<std::remove_cvref_t<typename Rhs::value_type_z>, Empty>));
+		
+		namespace detail {
+			template<typename Operation, typename T, typename U>
+			static constexpr decltype(auto) ScalarOutput(T&& lhs, U&& rhs) {
+				constexpr auto
+					lEmpty = std::same_as<std::remove_cvref_t<T>, Empty>,
+					rEmpty = std::same_as<std::remove_cvref_t<U>, Empty>;
+				if constexpr(lEmpty || rEmpty) {return Empty();}
+				else {return Operation()(std::forward<T>(lhs), std::forward<U>(rhs));}
+			}
+		}
 		
 		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
 			class LVec = Vec<LX, LY, LZ>,
@@ -621,6 +648,8 @@ namespace ink {
 		noexcept(Vec_CanDoBinaryOp<concepts::can_add_t, LVec, RVec, true>)
 		{ return ink::Vec(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z); }
 		
+		
+		
 		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
 			class LVec = Vec<LX, LY, LZ>,
 			class RVec = Vec<RX, RY, RZ> >
@@ -629,6 +658,8 @@ namespace ink {
 		operator-(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
 		noexcept(Vec_CanDoBinaryOp<concepts::can_sub_t, LVec, RVec, true>)
 		{ return ink::Vec(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z); }
+		
+		
 		
 		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
 			class LVec = Vec<LX, LY, LZ>,
@@ -639,14 +670,70 @@ namespace ink {
 		noexcept(Vec_CanDoBinaryOp<concepts::can_mul_t, LVec, RVec, true>)
 		{ return ink::Vec(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z); }
 		
+		template<typename T, typename LX, typename LY, typename LZ,
+			class LVec = Vec<LX, LY, LZ> >
+		requires(VecCanDoScalarOp<concepts::can_mul_t, LVec, T>)
+		static constexpr decltype(auto)
+		operator*(Vec<LX, LY, LZ> const& lhs, T const& rhs)
+		noexcept(VecCanDoScalarOp<concepts::can_mul_t, LVec, T, true>) {
+			constexpr auto lambda =
+			[](auto&& l, auto&& r) constexpr -> decltype(auto) { return l * r; };
+			using lambdaT = decltype(lambda);
+			using detail::ScalarOutput;
+			return ink::Vec(ScalarOutput<lambdaT>(lhs.x, rhs), ScalarOutput<lambdaT>(lhs.y, rhs), ScalarOutput<lambdaT>(lhs.z, rhs));
+		}
+		
+		template<typename T, typename RX, typename RY, typename RZ,
+			class RVec = Vec<RX, RY, RZ> >
+		requires(VecCanDoScalarOp<concepts::can_mul_t, T, RVec>)
+		static constexpr decltype(auto)
+		operator*(T const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(VecCanDoScalarOp<concepts::can_mul_t, T, RVec, true>) {
+			constexpr auto lambda =
+			[](auto&& l, auto&& r) constexpr -> decltype(auto) { return l * r; };
+			using lambdaT = decltype(lambda);
+			using detail::ScalarOutput;
+			return ink::Vec(ScalarOutput<lambdaT>(lhs, rhs.x), ScalarOutput<lambdaT>(lhs, rhs.y), ScalarOutput<lambdaT>(lhs, rhs.z));
+		}
+		
+		
+		
 		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
 			class LVec = Vec<LX, LY, LZ>,
 			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_div_t, LVec, RVec>)
+		requires(Vec_CanDoBinaryOp<concepts::can_div_t, Vec<LX, LY, LZ>, Vec<RX, RY, RZ>>)
 		static constexpr decltype(auto)
 		operator/(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
 		noexcept(Vec_CanDoBinaryOp<concepts::can_div_t, LVec, RVec, true>)
 		{ return ink::Vec(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z); }
+		
+		template<typename T, typename LX, typename LY, typename LZ,
+			class LVec = Vec<LX, LY, LZ> >
+		requires(VecCanDoScalarOp<concepts::can_div_t, LVec, T>)
+		static constexpr decltype(auto)
+		operator/(Vec<LX, LY, LZ> const& lhs, T const& rhs)
+		noexcept(VecCanDoScalarOp<concepts::can_div_t, LVec, T, true>) {
+			constexpr auto lambda =
+			[](auto&& l, auto&& r) constexpr -> decltype(auto) { return l / r; };
+			using lambdaT = decltype(lambda);
+			using detail::ScalarOutput;
+			return ink::Vec(ScalarOutput<lambdaT>(lhs.x, rhs), ScalarOutput<lambdaT>(lhs.y, rhs), ScalarOutput<lambdaT>(lhs.z, rhs));
+		}
+		
+		template<typename T, typename RX, typename RY, typename RZ,
+			class RVec = Vec<RX, RY, RZ> >
+		requires(VecCanDoScalarOp<concepts::can_div_t, T, RVec>)
+		static constexpr decltype(auto)
+		operator/(T const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(VecCanDoScalarOp<concepts::can_div_t, T, RVec, true>) {
+			constexpr auto lambda =
+			[](auto&& l, auto&& r) constexpr -> decltype(auto) { return l / r; };
+			using lambdaT = decltype(lambda);
+			using detail::ScalarOutput;
+			return ink::Vec(ScalarOutput<lambdaT>(lhs, rhs.x), ScalarOutput<lambdaT>(lhs, rhs.y), ScalarOutput<lambdaT>(lhs, rhs.z));
+		}
+		
+		
 		
 		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
 			class LVec = Vec<LX, LY, LZ>,
@@ -656,6 +743,32 @@ namespace ink {
 		operator%(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
 		noexcept(Vec_CanDoBinaryOp<concepts::can_mod_t, LVec, RVec, true>)
 		{ return ink::Vec(lhs.x % rhs.x, lhs.y % rhs.y, lhs.z % rhs.z); }
+		
+		template<typename T, typename LX, typename LY, typename LZ,
+			class LVec = Vec<LX, LY, LZ> >
+		requires(VecCanDoScalarOp<concepts::can_mod_t, LVec, T>)
+		static constexpr decltype(auto)
+		operator%(Vec<LX, LY, LZ> const& lhs, T const& rhs)
+		noexcept(VecCanDoScalarOp<concepts::can_mod_t, LVec, T, true>) {
+			constexpr auto lambda =
+			[](auto&& l, auto&& r) constexpr -> decltype(auto) { return l % r; };
+			using lambdaT = decltype(lambda);
+			using detail::ScalarOutput;
+			return ink::Vec(ScalarOutput<lambdaT>(lhs.x, rhs), ScalarOutput<lambdaT>(lhs.y, rhs), ScalarOutput<lambdaT>(lhs.z, rhs));
+		}
+		
+		template<typename T, typename RX, typename RY, typename RZ,
+			class RVec = Vec<RX, RY, RZ> >
+		requires(VecCanDoScalarOp<concepts::can_mod_t, T, RVec>)
+		static constexpr decltype(auto)
+		operator%(T const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(VecCanDoScalarOp<concepts::can_mod_t, T, RVec, true>) {
+			constexpr auto lambda =
+			[](auto&& l, auto&& r) constexpr -> decltype(auto) { return l % r; };
+			using lambdaT = decltype(lambda);
+			using detail::ScalarOutput;
+			return ink::Vec(ScalarOutput<lambdaT>(lhs, rhs.x), ScalarOutput<lambdaT>(lhs, rhs.y), ScalarOutput<lambdaT>(lhs, rhs.z));
+		}
 		
 	}
 	
