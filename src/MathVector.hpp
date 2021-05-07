@@ -659,6 +659,7 @@ namespace ink {
 			public: using Empty = generic_vec::Empty;
 			
 			
+			
 			public: constexpr
 			Vec()
 			noexcept(noexcept(base(nullptr, nullptr, nullptr)))
@@ -720,6 +721,9 @@ namespace ink {
 			std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<Empty, X>), void, X>,
 			std::conditional_t<(std::is_null_pointer_v<Y> || std::same_as<Empty, Y>), void, Y>, void
 		>;
+		
+		template<typename X, typename Y, typename Z>
+		Vec(typename Vec<X, Y, Z>::TempVec) -> Vec<X, Y, Z>;
 		
 	}
 	
