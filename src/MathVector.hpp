@@ -313,9 +313,14 @@ namespace ink {
 		
 		// Empty struct which acts as a 'null' type in the Vec class, and can be targeted to achieve customized behaviour for other types.
 		struct Empty {
+			template<typename,typename,typename> friend class Vec;
+			
 			public: constexpr
 			Empty(std::nullptr_t = {})
 			noexcept {}
+			
+			private: template<typename T> constexpr explicit
+			operator T() const noexcept(noexcept(T())) { return T(); }
 		};
 		
 		[[maybe_unused]] static constexpr decltype(auto)
@@ -391,15 +396,34 @@ namespace ink {
 		operator<=>(Empty,Empty) noexcept { return std::strong_ordering::equivalent; }
 		
 		[[maybe_unused]] static constexpr decltype(auto)
-		operator==(Empty,auto&& v) noexcept
+		operator<=>(Empty, auto v) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
+		{ return 0 <=> v; }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator<=>(auto v, Empty) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
+		{ return v <=> 0; }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator==(Empty, auto v) noexcept
 		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
 		{ return 0 == v; }
 		
 		[[maybe_unused]] static constexpr decltype(auto)
-		operator==(auto&& v, Empty) noexcept
+		operator==(auto v, Empty) noexcept
 		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
 		{ return v == 0; }
 		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator!=(Empty, auto v) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
+		{ return 0 != v; }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator!=(auto v, Empty) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
+		{ return v != 0; }
 		
 		
 		
@@ -527,6 +551,10 @@ namespace ink {
 			
 			private: using base = generic_vec::detail::VecBase<X, Y, Z>;
 			
+			private: using baseX = typename base::baseX;
+			private: using baseY = typename base::baseY;
+			private: using baseZ = typename base::baseZ;
+			
 			public: using value_type_x = decltype(Vec::x);
 			public: using value_type_y = decltype(Vec::y);
 			public: using value_type_z = decltype(Vec::z);
@@ -542,18 +570,11 @@ namespace ink {
 			
 			
 			
-			public: template<typename OX, typename OY, typename OZ>
-			constexpr
-			Vec(Vec<OX, OY, OZ> && other)
-			noexcept(noexcept(base(other.x, other.y, other.z)))
-			requires(std::constructible_from<base, decltype(other.x), decltype(other.y), decltype(other.z)>)
-			: base(static_cast<value_type_x>(other.x), static_cast<value_type_y>(other.y), static_cast<value_type_z>(other.z)) {}
-			
-			public: template<typename OX, typename OY, typename OZ>
+			public: template<typename OX, typename OY, typename OZ, class OVec = Vec<OX, OY, OZ>>
 			constexpr
 			Vec(Vec<OX, OY, OZ> const& other)
 			noexcept(noexcept(base(other.x, other.y, other.z)))
-			requires(std::constructible_from<base, decltype(other.x), decltype(other.y), decltype(other.z)>)
+			requires(std::constructible_from<base, typename OVec::value_type_x, typename OVec::value_type_y, typename OVec::value_type_z>)
 			: base(static_cast<value_type_x>(other.x), static_cast<value_type_y>(other.y), static_cast<value_type_z>(other.z)) {}
 			
 			
