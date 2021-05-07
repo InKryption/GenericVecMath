@@ -497,6 +497,27 @@ namespace ink {
 		
 		
 		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator&&(Empty, auto v) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>> || std::same_as<Empty,std::remove_cvref_t<decltype(v)>>)
+		{ return false; }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator||(Empty, Empty) noexcept
+		{ return false; }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator||(Empty, auto v) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
+		{ return 0 || v; }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator||(auto v, Empty) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
+		{ return v || 0; }
+		
+		
+		
 		namespace detail {
 			template<typename T> struct AxisX {
 				
@@ -937,6 +958,28 @@ namespace ink {
 		operator!=(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
 		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_neq_t, LVec, RVec, true>)
 		{ return ink::Vec( (lhs.x != rhs.x), (lhs.y != rhs.y), (lhs.z != rhs.z) ); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			class LVec = Vec<LX, LY, LZ>,
+			class RVec = Vec<RX, RY, RZ> >
+		requires(Vec_CanDoBinaryOp<concepts::can_logical_and_t, LVec, RVec>)
+		static constexpr decltype(auto)
+		operator&&(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(Vec_CanDoBinaryOp<concepts::can_logical_and_t, LVec, RVec, true>)
+		{ return ink::Vec( (lhs.x && rhs.x), (lhs.y && rhs.y), (lhs.z && rhs.z) ); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			class LVec = Vec<LX, LY, LZ>,
+			class RVec = Vec<RX, RY, RZ> >
+		requires(Vec_CanDoBinaryOp<concepts::can_logical_or_t, LVec, RVec>)
+		static constexpr decltype(auto)
+		operator||(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(Vec_CanDoBinaryOp<concepts::can_logical_or_t, LVec, RVec, true>)
+		{ return ink::Vec( (lhs.x || rhs.x), (lhs.y || rhs.y), (lhs.z || rhs.z) ); }
 		
 	}
 	
