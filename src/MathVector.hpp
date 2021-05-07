@@ -3,6 +3,7 @@
 
 #include <concepts>
 #include <utility>
+#include <functional>
 
 namespace ink {
 	
@@ -326,6 +327,10 @@ namespace ink {
 			
 			private: template<typename T> requires(std::default_initializable<T>) constexpr
 			operator T() const noexcept(noexcept(T())) { return T(); }
+			
+			private: constexpr decltype(auto)
+			operator=(auto&&) const noexcept { return *this; }
+			
 		};
 		
 		[[maybe_unused]] static constexpr decltype(auto)
@@ -678,7 +683,17 @@ namespace ink {
 			Vec(Vec<OX, OY, OZ> const& other)
 			noexcept(noexcept(base(other.x, other.y, other.z)))
 			requires(std::constructible_from<base, typename OVec::value_type_x, typename OVec::value_type_y, typename OVec::value_type_z>)
-			: base(static_cast<value_type_x>(other.x), static_cast<value_type_y>(other.y), static_cast<value_type_z>(other.z)) {}
+			: base(
+			static_cast<std::remove_cvref_t<value_type_x>>(other.x),
+			static_cast<std::remove_cvref_t<value_type_y>>(other.y),
+			static_cast<std::remove_cvref_t<value_type_z>>(other.z)) {}
+			
+			public: template<typename OX, typename OY, typename OZ, class OVec = Vec<OX, OY, OZ>>
+			constexpr
+			Vec(Vec<OX, OY, OZ> && other)
+			noexcept(noexcept(base(other.x, other.y, other.z)))
+			requires(std::constructible_from<base, typename OVec::value_type_x, typename OVec::value_type_y, typename OVec::value_type_z>)
+			: base(other.x, other.y, other.z) {}
 			
 			
 			
@@ -711,6 +726,15 @@ namespace ink {
 			noexcept(noexcept(base(nullptr, std::declval<OY>(), std::declval<OZ>())))
 			requires(std::constructible_from<base, Empty, OY, OZ> && std::is_void_v<X>)
 			: base(nullptr, std::forward<OY>(vy), std::forward<OZ>(vz)) {}
+			
+			public: template<typename OX, typename OY, typename OZ>
+			requires(std::is_reference_v<X> || std::is_reference_v<Y> || std::is_reference_v<Z>)
+			constexpr decltype(auto)
+			operator=(Vec<OX, OY, OZ> const& other) {
+				this->x = static_cast<std::remove_reference_t<value_type_x>>(other.x);
+				this->y = static_cast<std::remove_reference_t<value_type_y>>(other.y);
+				this->z = static_cast<std::remove_reference_t<value_type_z>>(other.z);
+			}
 			
 		};
 		
