@@ -111,9 +111,9 @@ namespace ink {
 		};
 		
 		template<typename T> struct AxisY {
+			
 			constexpr AxisY(auto&& v)
 			noexcept(noexcept(T(v)))
-			
 			requires(std::constructible_from<T, decltype(v)>)
 			: y(static_cast<T>(v)) {}
 			
@@ -127,9 +127,9 @@ namespace ink {
 		};
 		
 		template<typename T> struct AxisZ {
+			
 			constexpr AxisZ(auto&& v)
 			noexcept(noexcept(T(v)))
-			
 			requires(std::constructible_from<T, decltype(v)>)
 			: z(static_cast<T>(v)) {}
 			
@@ -208,10 +208,14 @@ namespace ink {
 	}
 	
 	// Flexible, anti-redundant templated math vector class.
-	template<typename X, typename Y, typename Z>
+	template<typename X, typename Y = X, typename Z = void>
 	class Vec: public detail::VecBase<X, Y, Z> {
 		
 		private: using base = detail::VecBase<X, Y, Z>;
+		
+		public: using value_type_x = decltype(Vec::x);
+		public: using value_type_y = decltype(Vec::y);
+		public: using value_type_z = decltype(Vec::z);
 		
 		public: constexpr
 		Vec()
@@ -264,7 +268,9 @@ namespace ink {
 		noexcept(noexcept(base(nullptr, std::declval<OY>(), std::declval<OZ>())))
 		requires(
 			std::constructible_from<base, std::nullptr_t, OY, OZ>
-		&&	std::is_void_v<X>)
+		&&	std::is_void_v<X>
+		&&	!std::is_void_v<Y>
+		&&	!std::is_void_v<Z>)
 		: base(nullptr, std::forward<OY>(vy), std::forward<OZ>(vz)) {}
 		
 		
@@ -332,6 +338,15 @@ namespace ink {
 		template<typename Lhs, typename Rhs = Lhs, bool MustBeNoexcept = false>
 		concept CanMod = (requires(Lhs lhs, Rhs rhs) { {lhs % rhs}; } && !MustBeNoexcept) || requires(Lhs lhs, Rhs rhs) { {lhs % rhs} noexcept; };
 		
+		template<typename Lhs, typename Rhs>
+		concept Vec_CanAdd
+		=	internal::SameTemplate<Vec<void>, Lhs>
+		&&	internal::SameTemplate<Vec<void>, Rhs>
+		&&	CanAdd<typename Lhs::value_type_x, typename Rhs::value_type_x>
+		&&	CanAdd<typename Lhs::value_type_y, typename Rhs::value_type_y>
+		&&	CanAdd<typename Lhs::value_type_z, typename Rhs::value_type_z>;
+		
+		
 		
 		
 		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ, class LVec = Vec<LX, LY, LZ>, class RVec = Vec<RX, RY, RZ>>
@@ -381,13 +396,7 @@ namespace ink {
 	
 }
 
-
-
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
-	
-	constexpr ink::Vec m = ink::Vec(2,nullptr,nullptr);
-	constexpr ink::Vec n = ink::Vec(3,nullptr,2);
-	constexpr ink::Vec o = m / n;
 	
 	
 	
