@@ -319,7 +319,7 @@ namespace ink {
 			Empty(std::nullptr_t = {})
 			noexcept {}
 			
-			private: template<typename T> constexpr explicit
+			private: template<typename T> requires(std::default_initializable<T>) constexpr explicit
 			operator T() const noexcept(noexcept(T())) { return T(); }
 		};
 		
@@ -405,6 +405,11 @@ namespace ink {
 		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
 		{ return v <=> 0; }
 		
+		
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator==(Empty,Empty) noexcept { return true; }
+		
 		[[maybe_unused]] static constexpr decltype(auto)
 		operator==(Empty, auto v) noexcept
 		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
@@ -415,6 +420,11 @@ namespace ink {
 		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
 		{ return v == 0; }
 		
+		
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator!=(Empty,Empty) noexcept { return false; }
+		
 		[[maybe_unused]] static constexpr decltype(auto)
 		operator!=(Empty, auto v) noexcept
 		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
@@ -424,6 +434,36 @@ namespace ink {
 		operator!=(auto v, Empty) noexcept
 		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
 		{ return v != 0; }
+		
+		
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator>(Empty,Empty) noexcept { return false; }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator>(Empty, auto v) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
+		{ return 0 > v; }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator>(auto v, Empty) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
+		{ return v > 0; }
+		
+		
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator<(Empty,Empty) noexcept { return false; }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator<(Empty, auto v) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
+		{ return 0 < v; }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator<(auto v, Empty) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
+		{ return v < 0; }
 		
 		
 		
@@ -722,7 +762,7 @@ namespace ink {
 		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
 			class LVec = Vec<LX, LY, LZ>,
 			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_div_t, Vec<LX, LY, LZ>, Vec<RX, RY, RZ>>)
+		requires(Vec_CanDoBinaryOp<concepts::can_div_t, LVec, RVec>)
 		static constexpr decltype(auto)
 		operator/(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
 		noexcept(Vec_CanDoBinaryOp<concepts::can_div_t, LVec, RVec, true>)
@@ -790,6 +830,83 @@ namespace ink {
 			using detail::ScalarOutput;
 			return ink::Vec(ScalarOutput<lambdaT>(lhs, rhs.x), ScalarOutput<lambdaT>(lhs, rhs.y), ScalarOutput<lambdaT>(lhs, rhs.z));
 		}
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			class LVec = Vec<LX, LY, LZ>,
+			class RVec = Vec<RX, RY, RZ> >
+		requires(Vec_CanDoBinaryOp<concepts::can_cmp_threeway_t, LVec, RVec>)
+		static constexpr decltype(auto)
+		operator<=>(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_threeway_t, LVec, RVec, true>)
+		{ return ink::Vec( (lhs.x <=> rhs.x), (lhs.y <=> rhs.y), (lhs.z <=> rhs.z) ); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			class LVec = Vec<LX, LY, LZ>,
+			class RVec = Vec<RX, RY, RZ> >
+		requires(Vec_CanDoBinaryOp<concepts::can_cmp_greater_t, LVec, RVec>)
+		static constexpr decltype(auto)
+		operator>(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_greater_t, LVec, RVec, true>)
+		{ return ink::Vec( (lhs.x > rhs.x), (lhs.y > rhs.y), (lhs.z > rhs.z) ); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			class LVec = Vec<LX, LY, LZ>,
+			class RVec = Vec<RX, RY, RZ> >
+		requires(Vec_CanDoBinaryOp<concepts::can_cmp_less_t, LVec, RVec>)
+		static constexpr decltype(auto)
+		operator<(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_less_t, LVec, RVec, true>)
+		{ return ink::Vec( (lhs.x < rhs.x), (lhs.y < rhs.y), (lhs.z < rhs.z) ); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			class LVec = Vec<LX, LY, LZ>,
+			class RVec = Vec<RX, RY, RZ> >
+		requires(Vec_CanDoBinaryOp<concepts::can_cmp_greater_eq_t, LVec, RVec>)
+		static constexpr decltype(auto)
+		operator>=(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_greater_eq_t, LVec, RVec, true>)
+		{ return ink::Vec( (lhs.x >= rhs.x), (lhs.y >= rhs.y), (lhs.z >= rhs.z) ); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			class LVec = Vec<LX, LY, LZ>,
+			class RVec = Vec<RX, RY, RZ> >
+		requires(Vec_CanDoBinaryOp<concepts::can_cmp_less_eq_t, LVec, RVec>)
+		static constexpr decltype(auto)
+		operator<=(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_less_eq_t, LVec, RVec, true>)
+		{ return ink::Vec( (lhs.x <= rhs.x), (lhs.y <= rhs.y), (lhs.z <= rhs.z) ); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			class LVec = Vec<LX, LY, LZ>,
+			class RVec = Vec<RX, RY, RZ> >
+		requires(Vec_CanDoBinaryOp<concepts::can_cmp_eq_t, LVec, RVec>)
+		static constexpr decltype(auto)
+		operator==(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_eq_t, LVec, RVec, true>)
+		{ return ink::Vec( (lhs.x == rhs.x), (lhs.y == rhs.y), (lhs.z == rhs.z) ); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			class LVec = Vec<LX, LY, LZ>,
+			class RVec = Vec<RX, RY, RZ> >
+		requires(Vec_CanDoBinaryOp<concepts::can_cmp_neq_t, LVec, RVec>)
+		static constexpr decltype(auto)
+		operator!=(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_neq_t, LVec, RVec, true>)
+		{ return ink::Vec( (lhs.x != rhs.x), (lhs.y != rhs.y), (lhs.z != rhs.z) ); }
 		
 	}
 	
