@@ -467,6 +467,36 @@ namespace ink {
 		
 		
 		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator>=(Empty,Empty) noexcept { return true; }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator>=(Empty, auto v) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
+		{ return 0 >= v; }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator>=(auto v, Empty) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
+		{ return v >= 0; }
+		
+		
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator<=(Empty,Empty) noexcept { return true; }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator<=(Empty, auto v) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
+		{ return 0 <= v; }
+		
+		[[maybe_unused]] static constexpr decltype(auto)
+		operator<=(auto v, Empty) noexcept
+		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
+		{ return v <= 0; }
+		
+		
+		
 		namespace detail {
 			template<typename T> struct AxisX {
 				
