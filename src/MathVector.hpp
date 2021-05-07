@@ -737,6 +737,20 @@ namespace ink {
 				this->z = static_cast<std::remove_reference_t<value_type_z>>(other.z);
 			}
 			
+			
+			
+			public: template<typename OX, typename OY, typename OZ>
+			friend constexpr decltype(auto)
+			dot(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
+				decltype(auto) mul = lhs * rhs;
+				return mul.x + mul.y + mul.z;
+			}
+			
+			public: template<typename OX, typename OY, typename OZ>
+			friend constexpr decltype(auto)
+			cross(Vec const& lhs, Vec<OX, OY, OZ> const& rhs)
+			{ return ink::generic_vec::Vec((lhs.y * rhs.z) - (lhs.z * rhs.y), (lhs.x * rhs.z) - (lhs.z * rhs.x), (lhs.x * rhs.y) - (lhs.y * rhs.x)); }
+			
 		};
 		
 		template<typename X, typename Y, typename Z>
