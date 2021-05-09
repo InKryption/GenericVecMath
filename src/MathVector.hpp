@@ -742,15 +742,15 @@ namespace ink {
 			requires((static_cast<size_t>(std::is_void_v<X> + std::is_void_v<Y> + std::is_void_v<Z>) >= 1) &&
 				std::constructible_from<base, OX, OY, OZ>)
 			: base(
-				[&]() constexpr { if constexpr(std::is_void_v<X>) {return OX();} else {return std::forward<A1>(a1);} }(),
-				[&]() constexpr { if constexpr(std::same_as<OY, Empty>) {return OY();} else if constexpr(std::is_void_v<Z>) {return std::forward<A2>(a2);} else {return std::forward<A1>(a1);}}(),
-				[&]() constexpr { if constexpr(std::is_void_v<Z>) {return OZ();} else {return std::forward<A2>(a1);} }()
+				[&]() constexpr { if constexpr(std::is_void_v<X>)		{return OX();}	else {return std::forward<A1>(a1);} }(),
+				[&]() constexpr { if constexpr(std::same_as<OY, Empty>)	{return OY();}	else if constexpr(std::is_void_v<Z>) {return std::forward<A2>(a2);} else {return std::forward<A1>(a1);}}(),
+				[&]() constexpr { if constexpr(std::is_void_v<Z>)		{return OZ();}	else {return std::forward<A2>(a1);} }()
 			) {}
 			
 			
 			
 			public: template<typename T,
-				typename OX = std::conditional_t<(!std::is_void_v<X> || (std::default_initializable<value_type_y> && std::default_initializable<value_type_z>)), T, Empty>,
+				typename OX = std::conditional_t<(!std::is_void_v<X>), T, Empty>,
 				typename OY = std::conditional_t<(std::is_void_v<X> && std::is_void_v<Z>), T, Empty>,
 				typename OZ = std::conditional_t<(!std::is_void_v<Z>), T, Empty>
 			>
@@ -758,9 +758,9 @@ namespace ink {
 			Vec(T&& v)
 			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
 			: base(
-				[&]() constexpr { if constexpr(std::is_void_v<X>) {return OX();} else {return std::forward<T>(v);} }(),
-				[&]() constexpr { if constexpr(std::same_as<OY, Empty>) {return OY();} else {return std::forward<T>(v);} }(),
-				[&]() constexpr { if constexpr(std::is_void_v<Z>) {return OY();} else {return std::forward<T>(v);} }()
+				[&]() constexpr { if constexpr(std::is_void_v<X>)		{ return OX(); }	else { return std::forward<T>(v); } }(),
+				[&]() constexpr { if constexpr(std::same_as<OY, Empty>)	{ return OY(); }	else { return std::forward<T>(v); } }(),
+				[&]() constexpr { if constexpr(std::is_void_v<Z>)		{ return OZ(); }	else { return std::forward<T>(v); } }()
 			) {}
 			
 			
