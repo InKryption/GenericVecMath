@@ -731,6 +731,7 @@ namespace ink {
 			
 			
 			
+			// Fix this motherfucker. It doesn't like reference types.
 			public: template<typename A1, typename A2,
 				typename OX = std::conditional_t<(std::is_void_v<X>), Empty, A1>,
 				typename OY = std::conditional_t<(std::is_void_v<X>), A1, std::conditional_t<(std::is_void_v<Z>), A2, Empty>>,
@@ -749,6 +750,7 @@ namespace ink {
 			
 			
 			
+			// Fix this motherfucker. It doesn't like reference types.
 			public: template<typename T,
 				typename OX = std::conditional_t<(!std::is_void_v<X>), T, Empty>,
 				typename OY = std::conditional_t<(std::is_void_v<X> && std::is_void_v<Z>), T, Empty>,
