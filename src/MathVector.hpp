@@ -3,7 +3,7 @@
 
 #include <concepts>
 #include <utility>
-#include <functional>
+#include <cmath>
 
 namespace ink {
 	
@@ -328,10 +328,18 @@ namespace ink {
 			private: template<typename T> requires(std::default_initializable<T>) constexpr
 			operator T() const noexcept(noexcept(T())) { return T(); }
 			
+			private: template<typename T>
+			constexpr explicit
+			Empty(T&&)
+			noexcept {}
+			
 			private: constexpr decltype(auto)
 			operator=(auto&&) const noexcept { return *this; }
 			
 		};
+		
+		template<typename T>
+		concept IsEmpty = std::same_as<std::remove_cvref_t<T>, Empty>;
 		
 		[[maybe_unused]] static constexpr decltype(auto)
 		operator+(Empty, auto v) noexcept
@@ -540,7 +548,7 @@ namespace ink {
 				constexpr AxisX(auto&& v)
 				noexcept(noexcept(T(v)))
 				requires(std::constructible_from<T, decltype(v)>)
-				: x(static_cast<T>(v)) {}
+				: x(v) {}
 				
 				constexpr AxisX(Empty = {})
 				noexcept(noexcept(T()))
@@ -556,7 +564,7 @@ namespace ink {
 				constexpr AxisY(auto&& v)
 				noexcept(noexcept(T(v)))
 				requires(std::constructible_from<T, decltype(v)>)
-				: y(static_cast<T>(v)) {}
+				: y(v) {}
 				
 				constexpr AxisY(Empty = {})
 				noexcept(noexcept(T()))
@@ -572,7 +580,7 @@ namespace ink {
 				constexpr AxisZ(auto&& v)
 				noexcept(noexcept(T(v)))
 				requires(std::constructible_from<T, decltype(v)>)
-				: z(static_cast<T>(v)) {}
+				: z(v) {}
 				
 				constexpr AxisZ(Empty = {})
 				noexcept(noexcept(T()))
@@ -618,14 +626,14 @@ namespace ink {
 				constexpr
 				VecBase(OX&& vx, OY&& vy, OZ&& vz)
 				noexcept(
-						noexcept(baseX(std::declval<OX>()))
-					&&	noexcept(baseY(std::declval<OY>()))
-					&&	noexcept(baseZ(std::declval<OZ>()))
+						( IsEmpty<OX> || noexcept(baseX(std::declval<OX>())))
+					&&	( IsEmpty<OY> || noexcept(baseY(std::declval<OY>())))
+					&&	( IsEmpty<OZ> || noexcept(baseZ(std::declval<OZ>())))
 				)
 				requires(
-						std::constructible_from<baseX, OX>
-					&&	std::constructible_from<baseY, OY>
-					&&	std::constructible_from<baseZ, OZ>
+						(std::constructible_from<baseX, OX> || IsEmpty<OX> )
+					&&	(std::constructible_from<baseY, OY> || IsEmpty<OY> )
+					&&	(std::constructible_from<baseZ, OZ> || IsEmpty<OZ> )
 				)
 				:	base0([&]() constexpr -> decltype(auto) {
 						if		constexpr(std::same_as<base0, baseX>)	{ return std::forward<OX>(vx); }
@@ -651,6 +659,19 @@ namespace ink {
 	}
 	
 	namespace generic_vec {
+		
+		namespace detail {
+			template<typename Operation, typename T, typename U>
+			static constexpr decltype(auto) ScalarOutput(T&& lhs, U&& rhs) {
+				constexpr auto
+					lEmpty = std::same_as<std::remove_cvref_t<T>, Empty>,
+					rEmpty = std::same_as<std::remove_cvref_t<U>, Empty>;
+				if constexpr(lEmpty || rEmpty) {return Empty();}
+				else {return Operation()(std::forward<T>(lhs), std::forward<U>(rhs));}
+			}
+		}
+		
+		
 		
 		// Flexible, multi-dimensional, templated math vector class.
 		template<typename X, typename Y = X, typename Z = void>
@@ -678,22 +699,26 @@ namespace ink {
 			
 			
 			
+			// static_cast-able constructor. Allows for conversion between vec types, including between those where one has (void), and the other doesn't.
 			public: template<typename OX, typename OY, typename OZ, class OVec = Vec<OX, OY, OZ>>
-			constexpr
+			explicit constexpr
 			Vec(Vec<OX, OY, OZ> const& other)
-			noexcept(noexcept(base(other.x, other.y, other.z)))
-			requires(std::constructible_from<base, typename OVec::value_type_x, typename OVec::value_type_y, typename OVec::value_type_z>)
+			noexcept(noexcept( base(
+				static_cast<value_type_x>(other.x),
+				static_cast<value_type_y>(other.y),
+				static_cast<value_type_z>(other.z)) ))
+			requires requires(
+				typename OVec::value_type_x ox,
+				typename OVec::value_type_y oy,
+				typename OVec::value_type_z oz ) {
+				static_cast<value_type_x>(ox);
+				static_cast<value_type_y>(oy);
+				static_cast<value_type_z>(oz);
+			}
 			: base(
-			static_cast<std::remove_cvref_t<value_type_x>>(other.x),
-			static_cast<std::remove_cvref_t<value_type_y>>(other.y),
-			static_cast<std::remove_cvref_t<value_type_z>>(other.z)) {}
-			
-			public: template<typename OX, typename OY, typename OZ, class OVec = Vec<OX, OY, OZ>>
-			constexpr
-			Vec(Vec<OX, OY, OZ> && other)
-			noexcept(noexcept(base(other.x, other.y, other.z)))
-			requires(std::constructible_from<base, typename OVec::value_type_x, typename OVec::value_type_y, typename OVec::value_type_z>)
-			: base(other.x, other.y, other.z) {}
+				static_cast<value_type_x>(other.x),
+				static_cast<value_type_y>(other.y),
+				static_cast<value_type_z>(other.z) ) {}
 			
 			
 			
@@ -706,26 +731,39 @@ namespace ink {
 			
 			
 			
-			public: template<typename OX, typename OY>
+			public: template<typename A1, typename A2,
+				typename OX = std::conditional_t<(std::is_void_v<X>), Empty, A1>,
+				typename OY = std::conditional_t<(std::is_void_v<X>), A1, std::conditional_t<(std::is_void_v<Z>), A2, Empty>>,
+				typename OZ = std::conditional_t<(std::is_void_v<Z>), Empty, A2>
+			>
 			constexpr
-			Vec(OX&& vx, OY&& vy)
-			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), nullptr)))
-			requires(std::constructible_from<base, OX, OY, Empty> && std::is_void_v<Z>)
-			: base(std::forward<OX>(vx), std::forward<OY>(vy), nullptr) {}
+			Vec(A1&& a1, A2&& a2)
+			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
+			requires((static_cast<size_t>(std::is_void_v<X> + std::is_void_v<Y> + std::is_void_v<Z>) >= 1) &&
+				std::constructible_from<base, OX, OY, OZ>)
+			: base(
+				[&]() constexpr { if constexpr(std::is_void_v<X>) {return OX();} else {return std::forward<A1>(a1);} }(),
+				[&]() constexpr { if constexpr(std::same_as<OY, Empty>) {return OY();} else if constexpr(std::is_void_v<Z>) {return std::forward<A2>(a2);} else {return std::forward<A1>(a1);}}(),
+				[&]() constexpr { if constexpr(std::is_void_v<Z>) {return OZ();} else {return std::forward<A2>(a1);} }()
+			) {}
 			
-			public: template<typename OX, typename OZ>
-			constexpr
-			Vec(OX&& vx, OZ&& vz)
-			noexcept(noexcept(base(std::declval<OX>(), nullptr, std::declval<OZ>())))
-			requires(std::constructible_from<base, OX, Empty, OZ> && std::is_void_v<Y>)
-			: base(std::forward<OX>(vx), nullptr, std::forward<OZ>(vz)) {}
 			
-			public: template<typename OY, typename OZ>
-			constexpr
-			Vec(OY&& vy, OZ&& vz)
-			noexcept(noexcept(base(nullptr, std::declval<OY>(), std::declval<OZ>())))
-			requires(std::constructible_from<base, Empty, OY, OZ> && std::is_void_v<X>)
-			: base(nullptr, std::forward<OY>(vy), std::forward<OZ>(vz)) {}
+			
+			public: template<typename T,
+				typename OX = std::conditional_t<(!std::is_void_v<X> || (std::default_initializable<value_type_y> && std::default_initializable<value_type_z>)), T, Empty>,
+				typename OY = std::conditional_t<(std::is_void_v<X> && std::is_void_v<Z>), T, Empty>,
+				typename OZ = std::conditional_t<(!std::is_void_v<Z>), T, Empty>
+			>
+			constexpr explicit
+			Vec(T&& v)
+			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
+			: base(
+				[&]() constexpr { if constexpr(std::is_void_v<X>) {return OX();} else {return std::forward<T>(v);} }(),
+				[&]() constexpr { if constexpr(std::same_as<OY, Empty>) {return OY();} else {return std::forward<T>(v);} }(),
+				[&]() constexpr { if constexpr(std::is_void_v<Z>) {return OY();} else {return std::forward<T>(v);} }()
+			) {}
+			
+			
 			
 			public: template<typename OX, typename OY, typename OZ>
 			constexpr decltype(auto)
@@ -739,6 +777,7 @@ namespace ink {
 			
 			
 			
+			// Dot product of two vectors.
 			public: template<typename OX, typename OY, typename OZ>
 			friend constexpr decltype(auto)
 			dot(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
@@ -746,10 +785,23 @@ namespace ink {
 				return mul.x + mul.y + mul.z;
 			}
 			
+			// Cross product of two vectors.
 			public: template<typename OX, typename OY, typename OZ>
 			friend constexpr decltype(auto)
-			cross(Vec const& lhs, Vec<OX, OY, OZ> const& rhs)
-			{ return ink::generic_vec::Vec((lhs.y * rhs.z) - (lhs.z * rhs.y), (lhs.x * rhs.z) - (lhs.z * rhs.x), (lhs.x * rhs.y) - (lhs.y * rhs.x)); }
+			cross(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
+				constexpr auto mul_lambda =
+				[](auto&& l, auto&& r) constexpr -> decltype(auto) { return l * r; };
+				using mul_lambdaT = decltype(mul_lambda);
+				decltype(auto) x = detail::ScalarOutput<mul_lambdaT>(lhs.y, rhs.z) - detail::ScalarOutput<mul_lambdaT>(lhs.z, rhs.y)/*(ly * rz) - (lz * ry)*/;
+				decltype(auto) y = detail::ScalarOutput<mul_lambdaT>(lhs.x, rhs.z) - detail::ScalarOutput<mul_lambdaT>(lhs.z, rhs.x)/*(lx * rz) - (lz * rx)*/;
+				decltype(auto) z = detail::ScalarOutput<mul_lambdaT>(lhs.x, rhs.y) - detail::ScalarOutput<mul_lambdaT>(lhs.y, rhs.z)/*(lx * ry) - (ly * rx)*/;
+				return ink::generic_vec::Vec(x, -y, z);
+			}
+			
+			// Returns the magnitude squared. Cheaper than calculating the magnitude (which requires a square root).
+			public: friend constexpr decltype(auto)
+			mag2(Vec const& vec)
+			{ return dot(vec, vec); }
 			
 		};
 		
@@ -764,6 +816,11 @@ namespace ink {
 		Vec(X, Y) -> Vec<
 			std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<Empty, X>), void, X>,
 			std::conditional_t<(std::is_null_pointer_v<Y> || std::same_as<Empty, Y>), void, Y>, void
+		>;
+		
+		template<typename X>
+		Vec(X) -> Vec<
+			std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<Empty, X>), void, X>, void, void
 		>;
 		
 	}
@@ -791,16 +848,7 @@ namespace ink {
 			&&	(Constraint<Lhs, typename Rhs::value_type_y, MustBeNoexcept>::value || std::same_as<std::remove_cvref_t<typename Rhs::value_type_y>, Empty>)
 			&&	(Constraint<Lhs, typename Rhs::value_type_z, MustBeNoexcept>::value || std::same_as<std::remove_cvref_t<typename Rhs::value_type_z>, Empty>));
 		
-		namespace detail {
-			template<typename Operation, typename T, typename U>
-			static constexpr decltype(auto) ScalarOutput(T&& lhs, U&& rhs) {
-				constexpr auto
-					lEmpty = std::same_as<std::remove_cvref_t<T>, Empty>,
-					rEmpty = std::same_as<std::remove_cvref_t<U>, Empty>;
-				if constexpr(lEmpty || rEmpty) {return Empty();}
-				else {return Operation()(std::forward<T>(lhs), std::forward<U>(rhs));}
-			}
-		}
+		
 		
 		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
 			class LVec = Vec<LX, LY, LZ>,
