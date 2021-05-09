@@ -754,6 +754,7 @@ namespace ink {
 				typename OY = std::conditional_t<(std::is_void_v<X> && std::is_void_v<Z>), T, Empty>,
 				typename OZ = std::conditional_t<(!std::is_void_v<Z>), T, Empty>
 			>
+			requires(!ink::concepts::same_template<Vec, T>)
 			constexpr explicit
 			Vec(T&& v)
 			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
