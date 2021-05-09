@@ -783,7 +783,7 @@ namespace ink {
 			friend constexpr decltype(auto)
 			dot(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
 				decltype(auto) mul = lhs * rhs;
-				return (mul.x + mul.y) + mul.z;
+				return mul.x + mul.y + mul.z;
 			}
 			
 			// Cross product of two vectors.
