@@ -755,13 +755,13 @@ namespace ink {
 				typename OZ = std::conditional_t<(!std::is_void_v<Z>), T, Empty>
 			>
 			requires(!ink::concepts::same_template<Vec, T>)
-			constexpr explicit
+			constexpr
 			Vec(T&& v)
 			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
 			: base(
-				[&]() constexpr { if constexpr(std::is_void_v<X>)		{ return OX(); }	else { return std::forward<T>(v); } }(),
-				[&]() constexpr { if constexpr(std::same_as<OY, Empty>)	{ return OY(); }	else { return std::forward<T>(v); } }(),
-				[&]() constexpr { if constexpr(std::is_void_v<Z>)		{ return OZ(); }	else { return std::forward<T>(v); } }()
+				[&]() constexpr { if constexpr(std::is_void_v<X>)		{ return OX(); } else { return std::forward<T>(v); } }(),
+				[&]() constexpr { if constexpr(std::same_as<OY, Empty>)	{ return OY(); } else { return std::forward<T>(v); } }(),
+				[&]() constexpr { if constexpr(std::is_void_v<Z>)		{ return OZ(); } else { return std::forward<T>(v); } }()
 			) {}
 			
 			
@@ -804,6 +804,8 @@ namespace ink {
 			mag2(Vec const& vec)
 			{ return dot(vec, vec); }
 			
+			
+			
 		};
 		
 		template<typename X, typename Y, typename Z>
@@ -820,9 +822,7 @@ namespace ink {
 		>;
 		
 		template<typename X>
-		Vec(X) -> Vec<
-			std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<Empty, X>), void, X>, void, void
-		>;
+		Vec(X) -> Vec<std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<Empty, X>), void, X>, void, void>;
 		
 	}
 	
