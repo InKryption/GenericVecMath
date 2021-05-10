@@ -312,346 +312,118 @@ namespace ink {
 	
 	namespace generic_vec {
 		
-		// Empty struct which acts as a 'null' type in the Vec class.
-		// An unrelated type can overload an operator to interact with it to achieve
-		// desired overriding behaviour. That is to say, e.g., if a type is overloaded to multiply (operator*)
-		// with 'Empty' to return its default constructor, or return Empty/nullptr, or some other
-		// type. It interacts with all arithmetic/fundamental types as '0'. Meaning, e.g., you can't
-		// divide by empty.
 		struct Empty {
+			
 			template<typename,typename,typename> friend class Vec;
 			
 			public: constexpr
+			Empty(Empty const&)
+			noexcept {}
+				
+			public: constexpr
 			Empty(std::nullptr_t = {})
 			noexcept {}
-			
-			private: template<typename T> requires(std::default_initializable<T>) constexpr
-			operator T() const noexcept(noexcept(T())) { return T(); }
 			
 			private: template<typename T>
 			constexpr explicit
 			Empty(T&&)
 			noexcept {}
 			
+			private: template<typename T> requires(std::default_initializable<T>) constexpr
+			operator T() const noexcept(noexcept(T())) { return T(); }
+			
 			private: constexpr decltype(auto)
 			operator=(auto&&) const noexcept { return *this; }
 			
 		};
 		
-		template<typename T>
-		concept IsEmpty = std::same_as<std::remove_cvref_t<T>, Empty>;
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator+(Empty, auto v) noexcept
-		requires(std::is_arithmetic_v<std::remove_cvref_t<decltype(v)>>)
-		{ return 0 + v; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator+(auto v, Empty) noexcept
-		requires(std::is_arithmetic_v<std::remove_cvref_t<decltype(v)>>)
-		{ return v + 0; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator+(Empty, Empty) noexcept { return Empty(); }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator+(Empty) noexcept { return Empty(); }
-		
-		
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator-(Empty, auto v) noexcept
-		requires(std::is_arithmetic_v<std::remove_cvref_t<decltype(v)>>)
-		{ return 0 - v; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator-(auto v, Empty) noexcept
-		requires(std::is_arithmetic_v<std::remove_cvref_t<decltype(v)>>)
-		{ return v - 0; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator-(Empty, Empty) noexcept { return Empty(); }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator-(Empty) noexcept { return Empty(); }
-		
-		
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator*(Empty, auto v) noexcept
-		requires(std::is_arithmetic_v<std::remove_cvref_t<decltype(v)>>)
-		{ return 0 * v; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator*(auto v, Empty) noexcept
-		requires(std::is_arithmetic_v<std::remove_cvref_t<decltype(v)>>)
-		{ return v * 0; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator*(Empty, Empty) noexcept { return Empty(); }
-		
-		
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator/(Empty, auto v) noexcept
-		requires(std::is_arithmetic_v<std::remove_cvref_t<decltype(v)>>)
-		{ return 0 / v; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator/(auto v, Empty) noexcept
-		requires(std::is_arithmetic_v<std::remove_cvref_t<decltype(v)>>) = delete;
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator/(Empty, Empty) noexcept { return Empty(); }
-		
-		
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator%(Empty, auto v) noexcept
-		requires(std::is_arithmetic_v<std::remove_cvref_t<decltype(v)>>)
-		{ return 0 % v; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator%(Empty, Empty) noexcept { return Empty(); }
-		
-		
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator<=>(Empty,Empty) noexcept { return std::strong_ordering::equivalent; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator<=>(Empty, auto v) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return 0 <=> v; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator<=>(auto v, Empty) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return v <=> 0; }
-		
-		
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator==(Empty,Empty) noexcept { return true; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator==(Empty, auto v) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return 0 == v; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator==(auto v, Empty) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return v == 0; }
-		
-		
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator!=(Empty,Empty) noexcept { return false; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator!=(Empty, auto v) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return 0 != v; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator!=(auto v, Empty) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return v != 0; }
-		
-		
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator>(Empty,Empty) noexcept { return false; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator>(Empty, auto v) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return 0 > v; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator>(auto v, Empty) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return v > 0; }
-		
-		
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator<(Empty,Empty) noexcept { return false; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator<(Empty, auto v) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return 0 < v; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator<(auto v, Empty) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return v < 0; }
-		
-		
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator>=(Empty,Empty) noexcept { return true; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator>=(Empty, auto v) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return 0 >= v; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator>=(auto v, Empty) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return v >= 0; }
-		
-		
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator<=(Empty,Empty) noexcept { return true; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator<=(Empty, auto v) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return 0 <= v; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator<=(auto v, Empty) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return v <= 0; }
-		
-		
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator&&(Empty, auto v) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>> || std::same_as<Empty,std::remove_cvref_t<decltype(v)>>)
-		{ return false; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator||(Empty, Empty) noexcept
-		{ return false; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator||(Empty, auto v) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return 0 || v; }
-		
-		[[maybe_unused]] static constexpr decltype(auto)
-		operator||(auto v, Empty) noexcept
-		requires(std::is_fundamental_v<std::remove_cvref_t<decltype(v)>>)
-		{ return v || 0; }
-		
-		
-		
 		namespace detail {
-			template<typename T> struct AxisX {
+			
+			enum class XYZ: size_t
+			{ X , Y , Z };
+			
+			template<typename T, XYZ tag> struct Member;
+			template<typename T> struct Member<T, XYZ::X> { T x{}; };
+			template<typename T> struct Member<T, XYZ::Y> { T y{}; };
+			template<typename T> struct Member<T, XYZ::Z> { T z{}; };
+			
+			template<> struct Member<void, XYZ::X> { static constexpr Empty x{}; };
+			template<> struct Member<void, XYZ::Y> { static constexpr Empty y{}; };
+			template<> struct Member<void, XYZ::Z> { static constexpr Empty z{}; };
+			
+			template<typename T, XYZ tag>
+			class Axis:
+				public Member<T, tag>
+			{
 				
-				constexpr AxisX(auto&& v)
-				noexcept(noexcept(T(v)))
-				requires(std::constructible_from<T, decltype(v)>)
-				: x(v) {}
+				private:
+				using base = Member<T, tag>;
 				
-				constexpr AxisX(Empty = {})
-				noexcept(noexcept(T()))
-				requires(std::default_initializable<T>)
-				: x() {}
+				public:
+				template<typename U>
+				constexpr explicit
+				Axis(U&& u)
+				noexcept( noexcept(base{std::declval<U>()}) )
+				requires( requires(U uv) { base{uv}; } )
+				: base{std::forward<U>(u)} {}
 				
-				T x;
+				public:
+				constexpr explicit
+				Axis(Empty)
+				noexcept( noexcept(base{}) )
+				requires( std::default_initializable<base> )
+				: base{} {}
 				
 			};
-			
-			template<typename T> struct AxisY {
-				
-				constexpr AxisY(auto&& v)
-				noexcept(noexcept(T(v)))
-				requires(std::constructible_from<T, decltype(v)>)
-				: y(v) {}
-				
-				constexpr AxisY(Empty = {})
-				noexcept(noexcept(T()))
-				requires(std::default_initializable<T>)
-				: y() {}
-				
-				T y;
-				
-			};
-			
-			template<typename T> struct AxisZ {
-				
-				constexpr AxisZ(auto&& v)
-				noexcept(noexcept(T(v)))
-				requires(std::constructible_from<T, decltype(v)>)
-				: z(v) {}
-				
-				constexpr AxisZ(Empty = {})
-				noexcept(noexcept(T()))
-				requires(std::default_initializable<T>)
-				: z() {}
-				
-				T z;
-				
-			};
-			
-			template<> struct AxisX<void> { constexpr AxisX(Empty = Empty{}) noexcept {} static constexpr Empty x{}; };
-			template<> struct AxisY<void> { constexpr AxisY(Empty = Empty{}) noexcept {} static constexpr Empty y{}; };
-			template<> struct AxisZ<void> { constexpr AxisZ(Empty = Empty{}) noexcept {} static constexpr Empty z{}; };
 			
 			template<std::size_t i, typename X, typename Y, typename Z>
 			using aligned_axis_at =
-				std::conditional_t<( i == (2 - ((alignof(AxisX<X>) >= alignof(AxisY<Y>)) + (alignof(AxisX<X>) >= alignof(AxisZ<Z>)))) ), AxisX<X>,
-				std::conditional_t<( i == (2 - ((alignof(AxisY<Y>) >  alignof(AxisX<X>)) + (alignof(AxisY<Y>) >= alignof(AxisZ<Z>)))) ), AxisY<Y>, AxisZ<Z>
+				std::conditional_t<( i == (2 - ((alignof(Axis<X, XYZ::X>) >= alignof(Axis<Y, XYZ::Y>)) + (alignof(Axis<X, XYZ::X>) >= alignof(Axis<Z, XYZ::Z>)))) ),
+					Axis<X, XYZ::X>,
+				std::conditional_t<( i == (2 - ((alignof(Axis<Y, XYZ::Y>) >  alignof(Axis<X, XYZ::X>)) + (alignof(Axis<Y, XYZ::Y>) >= alignof(Axis<Z, XYZ::Z>)))) ),
+					Axis<Y, XYZ::Y>,
+					Axis<Z, XYZ::Z>
 				>
 			>;
 			
 			template<typename X, typename Y, typename Z>
-			struct VecBase:
-				aligned_axis_at<0, X, Y, Z>,
-				aligned_axis_at<1, X, Y, Z>,
-				aligned_axis_at<2, X, Y, Z>
+			class VecBase:
+				public aligned_axis_at<0, X, Y, Z>,
+				public aligned_axis_at<1, X, Y, Z>,
+				public aligned_axis_at<2, X, Y, Z>
 			{
+				
+				protected: using baseX = Axis<X, XYZ::X>;
+				protected: using baseY = Axis<Y, XYZ::Y>;
+				protected: using baseZ = Axis<Z, XYZ::Z>;
+				
 				private: using base0 = aligned_axis_at<0, X, Y, Z>;
 				private: using base1 = aligned_axis_at<1, X, Y, Z>;
 				private: using base2 = aligned_axis_at<2, X, Y, Z>;
 				
-				protected: using baseX = AxisX<X>;
-				protected: using baseY = AxisY<Y>;
-				protected: using baseZ = AxisZ<Z>;
-				
-				/**
-				 * This constructor accepts arguments in the order (X,Y,Z).
-				 * It initializes all bases in order (base0,base1,base2).
-				 * It determines, for each base, the appropriate argument to supply,
-				 * based on whether a base is equal to (baseX), (baseY), or (baseZ).
-				 */
-				public: template<typename OX, typename OY, typename OZ>
-				constexpr
+				public:
+				template<typename OX, typename OY, typename OZ>
+				constexpr explicit
 				VecBase(OX&& vx, OY&& vy, OZ&& vz)
-				noexcept(
-						( IsEmpty<OX> || noexcept(baseX(std::declval<OX>())))
-					&&	( IsEmpty<OY> || noexcept(baseY(std::declval<OY>())))
-					&&	( IsEmpty<OZ> || noexcept(baseZ(std::declval<OZ>())))
-				)
-				requires(
-						(std::constructible_from<baseX, OX> || IsEmpty<OX> )
-					&&	(std::constructible_from<baseY, OY> || IsEmpty<OY> )
-					&&	(std::constructible_from<baseZ, OZ> || IsEmpty<OZ> )
-				)
+				noexcept( noexcept(baseX{std::declval<OX>()}) && noexcept(baseY{std::declval<OY>()}) && noexcept(baseZ{std::declval<OZ>()}) )
+				requires( requires(OX ox, OY oy, OZ oz) { baseX{ox}; baseY{oy}; baseZ{oz}; } )
 				:	base0([&]() constexpr -> decltype(auto) {
-						if		constexpr(std::same_as<base0, baseX>)	{ return std::forward<OX>(vx); }
-						else if	constexpr(std::same_as<base0, baseY>)	{ return std::forward<OY>(vy); }
-						else if	constexpr(std::same_as<base0, baseZ>)	{ return std::forward<OZ>(vz); }
+						if		constexpr(std::same_as<base0, baseX>) {return std::forward<OX>(vx);}
+						else if	constexpr(std::same_as<base0, baseY>) {return std::forward<OY>(vy);}
+						else if	constexpr(std::same_as<base0, baseZ>) {return std::forward<OZ>(vz);}
 					}()),
 					base1([&]() constexpr -> decltype(auto) {
-						if		constexpr(std::same_as<base1, baseX>)	{ return std::forward<OX>(vx); }
-						else if	constexpr(std::same_as<base1, baseY>)	{ return std::forward<OY>(vy); }
-						else if	constexpr(std::same_as<base1, baseZ>)	{ return std::forward<OZ>(vz); }
+						if		constexpr(std::same_as<base1, baseX>) {return std::forward<OX>(vx);}
+						else if	constexpr(std::same_as<base1, baseY>) {return std::forward<OY>(vy);}
+						else if	constexpr(std::same_as<base1, baseZ>) {return std::forward<OZ>(vz);}
 					}()),
 					base2([&]() constexpr -> decltype(auto) {
-						if		constexpr(std::same_as<base2, baseX>)	{ return std::forward<OX>(vx); }
-						else if	constexpr(std::same_as<base2, baseY>)	{ return std::forward<OY>(vy); }
-						else if	constexpr(std::same_as<base2, baseZ>)	{ return std::forward<OZ>(vz); }
+						if		constexpr(std::same_as<base2, baseX>) {return std::forward<OX>(vx);}
+						else if	constexpr(std::same_as<base2, baseY>) {return std::forward<OY>(vy);}
+						else if	constexpr(std::same_as<base2, baseZ>) {return std::forward<OZ>(vz);}
 					}())
 				{}
-				
+					
 			};
 			
 		}
@@ -660,21 +432,10 @@ namespace ink {
 	
 	namespace generic_vec {
 		
-		namespace detail {
-			template<typename Operation, typename T, typename U>
-			static constexpr decltype(auto) ScalarOutput(T&& lhs, U&& rhs) {
-				constexpr auto
-					lEmpty = std::same_as<std::remove_cvref_t<T>, Empty>,
-					rEmpty = std::same_as<std::remove_cvref_t<U>, Empty>;
-				if constexpr(lEmpty || rEmpty) {return Empty();}
-				else {return Operation()(std::forward<T>(lhs), std::forward<U>(rhs));}
-			}
-		}
-		
 		
 		
 		// Flexible, multi-dimensional, templated math vector class.
-		template<typename X, typename Y = X, typename Z = void>
+		template<typename X, typename Y = X, typename Z = Y>
 		class Vec: public generic_vec::detail::VecBase<X, Y, Z> {
 			
 			private: using base = generic_vec::detail::VecBase<X, Y, Z>;
@@ -691,80 +452,48 @@ namespace ink {
 			
 			
 			
-			public: constexpr
+			public:
+			constexpr
 			Vec()
-			noexcept(noexcept(base(nullptr, nullptr, nullptr)))
+			noexcept(noexcept(base(Empty{}, Empty{}, Empty{})))
 			requires(std::constructible_from<base, Empty, Empty, Empty>)
-			: base(nullptr, nullptr, nullptr) {}
+			: base(Empty{}, Empty{}, Empty{}) {}
 			
 			
 			
-			// static_cast-able constructor. Allows for conversion between vec types, including between those where one has (void), and the other doesn't.
-			public: template<typename OX, typename OY, typename OZ, class OVec = Vec<OX, OY, OZ>>
-			explicit constexpr
-			Vec(Vec<OX, OY, OZ> const& other)
-			noexcept(noexcept( base(
-				static_cast<value_type_x>(other.x),
-				static_cast<value_type_y>(other.y),
-				static_cast<value_type_z>(other.z)) ))
-			requires requires(
-				typename OVec::value_type_x ox,
-				typename OVec::value_type_y oy,
-				typename OVec::value_type_z oz ) {
-				static_cast<value_type_x>(ox);
-				static_cast<value_type_y>(oy);
-				static_cast<value_type_z>(oz);
-			}
-			: base(
-				static_cast<value_type_x>(other.x),
-				static_cast<value_type_y>(other.y),
-				static_cast<value_type_z>(other.z) ) {}
-			
-			
-			
-			public: template<typename OX, typename OY, typename OZ>
+			public:
+			template<typename OX, typename OY, typename OZ>
 			constexpr
 			Vec(OX&& vx, OY&& vy, OZ&& vz)
 			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
 			requires(std::constructible_from<base, OX, OY, OZ>)
 			: base(std::forward<OX>(vx), std::forward<OY>(vy), std::forward<OZ>(vz)) {}
 			
-			
-			
-			// Fix this motherfucker. It doesn't like reference types.
-			public: template<typename A1, typename A2,
-				typename OX = std::conditional_t<(std::is_void_v<X>), Empty, A1>,
-				typename OY = std::conditional_t<(std::is_void_v<X>), A1, std::conditional_t<(std::is_void_v<Z>), A2, Empty>>,
-				typename OZ = std::conditional_t<(std::is_void_v<Z>), Empty, A2>
-			>
+			public:
+			template<typename OX, typename OY>
 			constexpr
-			Vec(A1&& a1, A2&& a2)
-			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
-			requires((static_cast<size_t>(std::is_void_v<X> + std::is_void_v<Y> + std::is_void_v<Z>) >= 1) &&
-				std::constructible_from<base, OX, OY, OZ>)
-			: base(
-				[&]() constexpr { if constexpr(std::is_void_v<X>)		{return OX();}	else {return std::forward<A1>(a1);} }(),
-				[&]() constexpr { if constexpr(std::same_as<OY, Empty>)	{return OY();}	else if constexpr(std::is_void_v<Z>) {return std::forward<A2>(a2);} else {return std::forward<A1>(a1);}}(),
-				[&]() constexpr { if constexpr(std::is_void_v<Z>)		{return OZ();}	else {return std::forward<A2>(a1);} }()
-			) {}
+			Vec(OX&& vx, OY&& vy)
+			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), Empty{})))
+			requires(std::constructible_from<base, OX, OY, Empty>)
+			: base(std::forward<OX>(vx), std::forward<OY>(vy), Empty{}) {}
+			
+			public:
+			template<typename OX>
+			constexpr explicit
+			Vec(OX&& vx)
+			noexcept(noexcept(base(std::declval<OX>(), Empty{}, Empty{})))
+			requires(std::constructible_from<base, OX, Empty, Empty>)
+			: base(std::forward<OX>(vx), Empty{}, Empty{}) {}
 			
 			
 			
-			// Fix this motherfucker. It doesn't like reference types.
-			public: template<typename T,
-				typename OX = std::conditional_t<(!std::is_void_v<X>), T, Empty>,
-				typename OY = std::conditional_t<(std::is_void_v<X> && std::is_void_v<Z>), T, Empty>,
-				typename OZ = std::conditional_t<(!std::is_void_v<Z>), T, Empty>
-			>
-			requires(!ink::concepts::same_template<Vec, T>)
+			public:
+			template<typename OX, typename OZ>
 			constexpr
-			Vec(T&& v)
-			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
-			: base(
-				[&]() constexpr { if constexpr(std::is_void_v<X>)		{ return OX(); } else { return std::forward<T>(v); } }(),
-				[&]() constexpr { if constexpr(std::same_as<OY, Empty>)	{ return OY(); } else { return std::forward<T>(v); } }(),
-				[&]() constexpr { if constexpr(std::is_void_v<Z>)		{ return OZ(); } else { return std::forward<T>(v); } }()
-			) {}
+			Vec(OX&& vx, OZ&& vz)
+			noexcept(noexcept(base(std::declval<OX>(), Empty{}, std::declval<OZ>())))
+			requires(std::constructible_from<base, OX, Empty, OZ> && std::is_void_v<Y> && !std::is_void_v<Z>)
+			: base(std::forward<OX>(vx), Empty{}, std::forward<OZ>(vz)) {}
 			
 			
 			
@@ -777,36 +506,6 @@ namespace ink {
 				this->y = static_cast<std::remove_reference_t<value_type_y>>(other.y);
 				this->z = static_cast<std::remove_reference_t<value_type_z>>(other.z);
 			}
-			
-			
-			
-			// Dot product of two vectors.
-			public: template<typename OX, typename OY, typename OZ>
-			friend constexpr decltype(auto)
-			dot(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
-				decltype(auto) mul = lhs * rhs;
-				return mul.x + mul.y + mul.z;
-			}
-			
-			// Cross product of two vectors.
-			public: template<typename OX, typename OY, typename OZ>
-			friend constexpr decltype(auto)
-			cross(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) {
-				constexpr auto mul_lambda =
-				[](auto&& l, auto&& r) constexpr -> decltype(auto) { return l * r; };
-				using mul_lambdaT = decltype(mul_lambda);
-				decltype(auto) x = detail::ScalarOutput<mul_lambdaT>(lhs.y, rhs.z) - detail::ScalarOutput<mul_lambdaT>(lhs.z, rhs.y)/*(ly * rz) - (lz * ry)*/;
-				decltype(auto) y = detail::ScalarOutput<mul_lambdaT>(lhs.x, rhs.z) - detail::ScalarOutput<mul_lambdaT>(lhs.z, rhs.x)/*(lx * rz) - (lz * rx)*/;
-				decltype(auto) z = detail::ScalarOutput<mul_lambdaT>(lhs.x, rhs.y) - detail::ScalarOutput<mul_lambdaT>(lhs.y, rhs.z)/*(lx * ry) - (ly * rx)*/;
-				return ink::generic_vec::Vec(x, -y, z);
-			}
-			
-			// Returns the magnitude squared. Cheaper than calculating the magnitude (which requires a square root).
-			public: friend constexpr decltype(auto)
-			mag2(Vec const& vec)
-			{ return dot(vec, vec); }
-			
-			
 			
 		};
 		
@@ -831,289 +530,6 @@ namespace ink {
 	using generic_vec::Vec;
 	using generic_vec::Empty;
 	
-	namespace generic_vec {
-		
-		template<typename T> concept IsVec = concepts::same_template<T, Vec<void>>;
-		template<template<typename,typename,bool> typename Constraint, typename Lhs, typename Rhs = Lhs, bool MustBeNoexcept = false>
-		concept Vec_CanDoBinaryOp = IsVec<Lhs> && IsVec<Rhs>
-			&&	Constraint<typename std::remove_cvref_t<Lhs>::value_type_x, typename std::remove_cvref_t<Lhs>::value_type_x, MustBeNoexcept>::value
-			&&	Constraint<typename std::remove_cvref_t<Lhs>::value_type_y, typename std::remove_cvref_t<Lhs>::value_type_y, MustBeNoexcept>::value
-			&&	Constraint<typename std::remove_cvref_t<Lhs>::value_type_z, typename std::remove_cvref_t<Lhs>::value_type_z, MustBeNoexcept>::value;
-		
-		template<template<typename,typename,bool> typename Constraint, typename Lhs, typename Rhs, bool MustBeNoexcept = false>
-		concept VecCanDoScalarOp =
-			(	(IsVec<Lhs>) && (!IsVec<Rhs>)
-			&&	(Constraint<typename Lhs::value_type_x, Rhs, MustBeNoexcept>::value || std::same_as<std::remove_cvref_t<typename Lhs::value_type_x>, Empty>)
-			&&	(Constraint<typename Lhs::value_type_y, Rhs, MustBeNoexcept>::value || std::same_as<std::remove_cvref_t<typename Lhs::value_type_y>, Empty>)
-			&&	(Constraint<typename Lhs::value_type_z, Rhs, MustBeNoexcept>::value || std::same_as<std::remove_cvref_t<typename Lhs::value_type_z>, Empty>))	||
-			(	(!IsVec<Lhs>) && (IsVec<Rhs>)
-			&&	(Constraint<Lhs, typename Rhs::value_type_x, MustBeNoexcept>::value || std::same_as<std::remove_cvref_t<typename Rhs::value_type_x>, Empty>)
-			&&	(Constraint<Lhs, typename Rhs::value_type_y, MustBeNoexcept>::value || std::same_as<std::remove_cvref_t<typename Rhs::value_type_y>, Empty>)
-			&&	(Constraint<Lhs, typename Rhs::value_type_z, MustBeNoexcept>::value || std::same_as<std::remove_cvref_t<typename Rhs::value_type_z>, Empty>));
-		
-		
-		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
-			class LVec = Vec<LX, LY, LZ>,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_add_t, LVec, RVec>)
-		static constexpr decltype(auto)
-		operator+(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(Vec_CanDoBinaryOp<concepts::can_add_t, LVec, RVec, true>)
-		{ return ink::Vec(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z); }
-		
-		
-		
-		template<typename X, typename Y, typename Z, class OVec = Vec<X, Y, Z>>
-		requires(
-				ink::concepts::can_unary_add<typename OVec::value_type_x>
-			&&	ink::concepts::can_unary_add<typename OVec::value_type_y>
-			&&	ink::concepts::can_unary_add<typename OVec::value_type_z>)
-		static constexpr decltype(auto)
-		operator+(Vec<X, Y, Z> const& vec)
-		noexcept(
-				ink::concepts::can_unary_add<typename OVec::value_type_x, true>
-			&&	ink::concepts::can_unary_add<typename OVec::value_type_y, true>
-			&&	ink::concepts::can_unary_add<typename OVec::value_type_x, true>)
-		{ return ink::Vec(+vec.x, +vec.y, +vec.z); }
-		
-		
-		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
-			class LVec = Vec<LX, LY, LZ>,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_sub_t, LVec, RVec>)
-		static constexpr decltype(auto)
-		operator-(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(Vec_CanDoBinaryOp<concepts::can_sub_t, LVec, RVec, true>)
-		{ return ink::Vec(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z); }
-		
-		
-		
-		template<typename X, typename Y, typename Z, class OVec = Vec<X, Y, Z>>
-		requires(
-				ink::concepts::can_unary_sub<typename OVec::value_type_x>
-			&&	ink::concepts::can_unary_sub<typename OVec::value_type_y>
-			&&	ink::concepts::can_unary_sub<typename OVec::value_type_z>)
-		static constexpr decltype(auto)
-		operator-(Vec<X, Y, Z> const& vec)
-		noexcept(
-				ink::concepts::can_unary_sub<typename OVec::value_type_x, true>
-			&&	ink::concepts::can_unary_sub<typename OVec::value_type_y, true>
-			&&	ink::concepts::can_unary_sub<typename OVec::value_type_z, true>)
-		{ return ink::Vec(-vec.x, -vec.y, -vec.z); }
-		
-		
-		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
-			class LVec = Vec<LX, LY, LZ>,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_mul_t, LVec, RVec>)
-		static constexpr decltype(auto)
-		operator*(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(Vec_CanDoBinaryOp<concepts::can_mul_t, LVec, RVec, true>)
-		{ return ink::Vec(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z); }
-		
-		template<typename T, typename LX, typename LY, typename LZ,
-			class LVec = Vec<LX, LY, LZ> >
-		requires(VecCanDoScalarOp<concepts::can_mul_t, LVec, T>)
-		static constexpr decltype(auto)
-		operator*(Vec<LX, LY, LZ> const& lhs, T const& rhs)
-		noexcept(VecCanDoScalarOp<concepts::can_mul_t, LVec, T, true>) {
-			constexpr auto lambda =
-			[](auto&& l, auto&& r) constexpr -> decltype(auto) { return l * r; };
-			using lambdaT = decltype(lambda);
-			using detail::ScalarOutput;
-			return ink::Vec(ScalarOutput<lambdaT>(lhs.x, rhs), ScalarOutput<lambdaT>(lhs.y, rhs), ScalarOutput<lambdaT>(lhs.z, rhs));
-		}
-		
-		template<typename T, typename RX, typename RY, typename RZ,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(VecCanDoScalarOp<concepts::can_mul_t, T, RVec>)
-		static constexpr decltype(auto)
-		operator*(T const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(VecCanDoScalarOp<concepts::can_mul_t, T, RVec, true>) {
-			constexpr auto lambda =
-			[](auto&& l, auto&& r) constexpr -> decltype(auto) { return l * r; };
-			using lambdaT = decltype(lambda);
-			using detail::ScalarOutput;
-			return ink::Vec(ScalarOutput<lambdaT>(lhs, rhs.x), ScalarOutput<lambdaT>(lhs, rhs.y), ScalarOutput<lambdaT>(lhs, rhs.z));
-		}
-		
-		
-		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
-			class LVec = Vec<LX, LY, LZ>,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_div_t, LVec, RVec>)
-		static constexpr decltype(auto)
-		operator/(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(Vec_CanDoBinaryOp<concepts::can_div_t, LVec, RVec, true>)
-		{ return ink::Vec(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z); }
-		
-		template<typename T, typename LX, typename LY, typename LZ,
-			class LVec = Vec<LX, LY, LZ> >
-		requires(VecCanDoScalarOp<concepts::can_div_t, LVec, T>)
-		static constexpr decltype(auto)
-		operator/(Vec<LX, LY, LZ> const& lhs, T const& rhs)
-		noexcept(VecCanDoScalarOp<concepts::can_div_t, LVec, T, true>) {
-			constexpr auto lambda =
-			[](auto&& l, auto&& r) constexpr -> decltype(auto) { return l / r; };
-			using lambdaT = decltype(lambda);
-			using detail::ScalarOutput;
-			return ink::Vec(ScalarOutput<lambdaT>(lhs.x, rhs), ScalarOutput<lambdaT>(lhs.y, rhs), ScalarOutput<lambdaT>(lhs.z, rhs));
-		}
-		
-		template<typename T, typename RX, typename RY, typename RZ,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(VecCanDoScalarOp<concepts::can_div_t, T, RVec>)
-		static constexpr decltype(auto)
-		operator/(T const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(VecCanDoScalarOp<concepts::can_div_t, T, RVec, true>) {
-			constexpr auto lambda =
-			[](auto&& l, auto&& r) constexpr -> decltype(auto) { return l / r; };
-			using lambdaT = decltype(lambda);
-			using detail::ScalarOutput;
-			return ink::Vec(ScalarOutput<lambdaT>(lhs, rhs.x), ScalarOutput<lambdaT>(lhs, rhs.y), ScalarOutput<lambdaT>(lhs, rhs.z));
-		}
-		
-		
-		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
-			class LVec = Vec<LX, LY, LZ>,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_mod_t, LVec, RVec>)
-		static constexpr decltype(auto)
-		operator%(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(Vec_CanDoBinaryOp<concepts::can_mod_t, LVec, RVec, true>)
-		{ return ink::Vec(lhs.x % rhs.x, lhs.y % rhs.y, lhs.z % rhs.z); }
-		
-		template<typename T, typename LX, typename LY, typename LZ,
-			class LVec = Vec<LX, LY, LZ> >
-		requires(VecCanDoScalarOp<concepts::can_mod_t, LVec, T>)
-		static constexpr decltype(auto)
-		operator%(Vec<LX, LY, LZ> const& lhs, T const& rhs)
-		noexcept(VecCanDoScalarOp<concepts::can_mod_t, LVec, T, true>) {
-			constexpr auto lambda =
-			[](auto&& l, auto&& r) constexpr -> decltype(auto) { return l % r; };
-			using lambdaT = decltype(lambda);
-			using detail::ScalarOutput;
-			return ink::Vec(ScalarOutput<lambdaT>(lhs.x, rhs), ScalarOutput<lambdaT>(lhs.y, rhs), ScalarOutput<lambdaT>(lhs.z, rhs));
-		}
-		
-		template<typename T, typename RX, typename RY, typename RZ,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(VecCanDoScalarOp<concepts::can_mod_t, T, RVec>)
-		static constexpr decltype(auto)
-		operator%(T const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(VecCanDoScalarOp<concepts::can_mod_t, T, RVec, true>) {
-			constexpr auto lambda =
-			[](auto&& l, auto&& r) constexpr -> decltype(auto) { return l % r; };
-			using lambdaT = decltype(lambda);
-			using detail::ScalarOutput;
-			return ink::Vec(ScalarOutput<lambdaT>(lhs, rhs.x), ScalarOutput<lambdaT>(lhs, rhs.y), ScalarOutput<lambdaT>(lhs, rhs.z));
-		}
-		
-		
-		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
-			class LVec = Vec<LX, LY, LZ>,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_cmp_threeway_t, LVec, RVec>)
-		static constexpr decltype(auto)
-		operator<=>(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_threeway_t, LVec, RVec, true>)
-		{ return ink::Vec( (lhs.x <=> rhs.x), (lhs.y <=> rhs.y), (lhs.z <=> rhs.z) ); }
-		
-		
-		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
-			class LVec = Vec<LX, LY, LZ>,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_cmp_greater_t, LVec, RVec>)
-		static constexpr decltype(auto)
-		operator>(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_greater_t, LVec, RVec, true>)
-		{ return ink::Vec( (lhs.x > rhs.x), (lhs.y > rhs.y), (lhs.z > rhs.z) ); }
-		
-		
-		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
-			class LVec = Vec<LX, LY, LZ>,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_cmp_less_t, LVec, RVec>)
-		static constexpr decltype(auto)
-		operator<(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_less_t, LVec, RVec, true>)
-		{ return ink::Vec( (lhs.x < rhs.x), (lhs.y < rhs.y), (lhs.z < rhs.z) ); }
-		
-		
-		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
-			class LVec = Vec<LX, LY, LZ>,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_cmp_greater_eq_t, LVec, RVec>)
-		static constexpr decltype(auto)
-		operator>=(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_greater_eq_t, LVec, RVec, true>)
-		{ return ink::Vec( (lhs.x >= rhs.x), (lhs.y >= rhs.y), (lhs.z >= rhs.z) ); }
-		
-		
-		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
-			class LVec = Vec<LX, LY, LZ>,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_cmp_less_eq_t, LVec, RVec>)
-		static constexpr decltype(auto)
-		operator<=(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_less_eq_t, LVec, RVec, true>)
-		{ return ink::Vec( (lhs.x <= rhs.x), (lhs.y <= rhs.y), (lhs.z <= rhs.z) ); }
-		
-		
-		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
-			class LVec = Vec<LX, LY, LZ>,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_cmp_eq_t, LVec, RVec>)
-		static constexpr decltype(auto)
-		operator==(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_eq_t, LVec, RVec, true>)
-		{ return ink::Vec( (lhs.x == rhs.x), (lhs.y == rhs.y), (lhs.z == rhs.z) ); }
-		
-		
-		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
-			class LVec = Vec<LX, LY, LZ>,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_cmp_neq_t, LVec, RVec>)
-		static constexpr decltype(auto)
-		operator!=(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(Vec_CanDoBinaryOp<concepts::can_cmp_neq_t, LVec, RVec, true>)
-		{ return ink::Vec( (lhs.x != rhs.x), (lhs.y != rhs.y), (lhs.z != rhs.z) ); }
-		
-		
-		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
-			class LVec = Vec<LX, LY, LZ>,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_logical_and_t, LVec, RVec>)
-		static constexpr decltype(auto)
-		operator&&(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(Vec_CanDoBinaryOp<concepts::can_logical_and_t, LVec, RVec, true>)
-		{ return ink::Vec( (lhs.x && rhs.x), (lhs.y && rhs.y), (lhs.z && rhs.z) ); }
-		
-		
-		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
-			class LVec = Vec<LX, LY, LZ>,
-			class RVec = Vec<RX, RY, RZ> >
-		requires(Vec_CanDoBinaryOp<concepts::can_logical_or_t, LVec, RVec>)
-		static constexpr decltype(auto)
-		operator||(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(Vec_CanDoBinaryOp<concepts::can_logical_or_t, LVec, RVec, true>)
-		{ return ink::Vec( (lhs.x || rhs.x), (lhs.y || rhs.y), (lhs.z || rhs.z) ); }
-		
-	}
 	
 }
 
