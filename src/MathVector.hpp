@@ -329,11 +329,17 @@ namespace ink {
 			Empty(T&&)
 			noexcept {}
 			
-			private: template<typename T> requires(std::default_initializable<T>) constexpr
+			public:
+			template<std::default_initializable T>
+			constexpr explicit
 			operator T() const noexcept(noexcept(T())) { return T(); }
 			
-			private: constexpr decltype(auto)
+			private:
+			constexpr decltype(auto)
 			operator=(auto&&) const noexcept { return *this; }
+			
+			public: template<typename T>
+			friend constexpr decltype(auto) operator/(T, Empty) = delete;
 			
 		};
 		
@@ -550,6 +556,25 @@ namespace ink {
 	using generic_vec::Vec;
 	using generic_vec::Empty;
 	
+	namespace generic_vec {
+		
+		template<bool PREFER_EMPTY = false, typename Op, typename Lhs, typename Rhs>
+		requires(	((std::same_as<std::remove_cvref_t<Lhs>, Empty>) || (std::is_arithmetic_v<std::remove_cvref_t<Lhs>>))
+		&&			((std::same_as<std::remove_cvref_t<Rhs>, Empty>) || (std::is_arithmetic_v<std::remove_cvref_t<Rhs>>)) )
+		static constexpr decltype(auto)
+		VecOpOut(Op op, Lhs&& lhs, Rhs&& rhs)
+		{
+			constexpr auto lArith = std::is_arithmetic_v<std::remove_cvref_t<Lhs>>;
+			constexpr auto rArith = std::is_arithmetic_v<std::remove_cvref_t<Rhs>>;
+			constexpr auto lEmpty = std::same_as<std::remove_cvref_t<Lhs>, Empty>;
+			constexpr auto rEmpty = std::same_as<std::remove_cvref_t<Rhs>, Empty>;
+			if		constexpr(lArith && rArith) { return op(std::forward<Lhs>(lhs), std::forward<Rhs>(rhs)); }
+			else if	constexpr((lEmpty && rEmpty) || (PREFER_EMPTY && lArith) || (PREFER_EMPTY && rArith)) { return Empty{}; }
+			else if	constexpr(lArith && rEmpty) { return op(std::forward<Lhs>(lhs), static_cast<Lhs>(0)); }
+			else if	constexpr(lEmpty && rArith) { return op(static_cast<Lhs>(0), std::forward<Rhs>(rhs)); }
+		}
+		
+	}
 	
 }
 
