@@ -338,10 +338,238 @@ namespace ink {
 			constexpr decltype(auto)
 			operator=(auto&&) const noexcept { return *this; }
 			
-			public: template<typename T>
-			friend constexpr decltype(auto) operator/(T, Empty) = delete;
+			
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator*(T v, Empty) noexcept
+			{ return v * 0; }
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator*(Empty, T v) noexcept
+			{ return 0 * v; }
+			
+			friend constexpr decltype(auto)
+			operator*(Empty, Empty) noexcept
+			{ return Empty(); }
+			
+			
+			
+			template<std::integral T>
+			friend constexpr decltype(auto)
+			operator/(T, Empty) noexcept = delete;
+			
+			template<std::floating_point T>
+			friend constexpr decltype(auto)
+			operator/(T v, Empty) noexcept
+			{ return v / 0.0; }
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator/(Empty, T v) noexcept
+			{ return 0 / v; }
+			
+			friend constexpr decltype(auto)
+			operator/(Empty, Empty) noexcept
+			{ return Empty(); }
+			
+			
+			
+			template<std::integral T>
+			friend constexpr decltype(auto)
+			operator%(T, Empty) noexcept = delete;
+			
+			template<std::integral T>
+			friend constexpr decltype(auto)
+			operator%(Empty, T v) noexcept
+			{ return 0 % v; }
+			
+			friend constexpr decltype(auto)
+			operator%(Empty, Empty) noexcept
+			{ return Empty(); }
+			
+			
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator+(T v, Empty) noexcept
+			{ return v + 0; }
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator+(Empty, T v) noexcept
+			{ return 0 + v; }
+			
+			friend constexpr decltype(auto)
+			operator+(Empty, Empty) noexcept
+			{ return Empty(); }
+			
+			
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator-(T v, Empty) noexcept
+			{ return v - 0; }
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator-(Empty, T v) noexcept
+			{ return 0 - v; }
+			
+			friend constexpr decltype(auto)
+			operator-(Empty, Empty) noexcept
+			{ return Empty(); }
+			
+			
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator<=>(T v, Empty) noexcept
+			{ return v <=> 0; }
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator<=>(Empty, T v) noexcept
+			{ return 0 <=> v; }
+			
+			friend constexpr decltype(auto)
+			operator<=>(Empty, Empty) noexcept
+			{ return 0 <=> 0; }
+			
+			
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator==(T v, Empty) noexcept
+			{ return v == 0; }
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator==(Empty, T v) noexcept
+			{ return 0 == v; }
+			
+			friend constexpr decltype(auto)
+			operator==(Empty, Empty) noexcept
+			{ return true; }
+			
+			
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator!=(T v, Empty) noexcept
+			{ return v != 0; }
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator!=(Empty, T v) noexcept
+			{ return 0 != v; }
+			
+			friend constexpr decltype(auto)
+			operator!=(Empty, Empty) noexcept
+			{ return false; }
+			
+			
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator&&(T, Empty) noexcept
+			{ return false; }
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator&&(Empty, T) noexcept
+			{ return false; }
+			
+			friend constexpr decltype(auto)
+			operator&&(Empty, Empty) noexcept
+			{ return false; }
+			
+			
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator||(T v, Empty) noexcept
+			{ return v || 0; }
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator||(Empty, T v) noexcept
+			{ return 0 || v; }
+			
+			friend constexpr decltype(auto)
+			operator||(Empty, Empty) noexcept
+			{ return false; }
+			
+			
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator<<(T v, Empty) noexcept
+			{ return v; }
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator<<(Empty, T) noexcept
+			{ return Empty(); }
+			
+			friend constexpr decltype(auto)
+			operator<<(Empty, Empty) noexcept
+			{ return Empty(); }
+			
+			
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator>>(T v, Empty) noexcept
+			{ return v; }
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator>>(Empty, T) noexcept
+			{ return Empty(); }
+			
+			friend constexpr decltype(auto)
+			operator>>(Empty, Empty) noexcept
+			{ return Empty(); }
+			
+			
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator&(T v, Empty) noexcept
+			{ return v & 0; }
+			
+			template<typename T> requires(std::is_arithmetic_v<std::remove_cvref_t<T>>)
+			friend constexpr decltype(auto)
+			operator&(Empty, T v) noexcept
+			{ return 0 & v; }
+			
+			friend constexpr decltype(auto)
+			operator&(Empty, Empty) noexcept
+			{ return Empty(); }
+			
+			
+			
+			friend constexpr decltype(auto)
+			operator!(Empty) noexcept
+			{ return true; }
+			
+			friend constexpr decltype(auto)
+			operator~(Empty) noexcept
+			{ return 1; }
+			
+			friend constexpr decltype(auto)
+			operator+(Empty) noexcept
+			{ return Empty(); }
+			
+			friend constexpr decltype(auto)
+			operator-(Empty) noexcept
+			{ return Empty(); }
 			
 		};
+		
+		
 		
 		namespace detail {
 			
@@ -557,6 +785,8 @@ namespace ink {
 	using generic_vec::Empty;
 	
 	namespace generic_vec {
+		
+		
 		
 	}
 	
