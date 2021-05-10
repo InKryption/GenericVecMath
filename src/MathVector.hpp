@@ -558,50 +558,6 @@ namespace ink {
 	
 	namespace generic_vec {
 		
-		template<bool PREFER_EMPTY = false, typename Op, typename Lhs, typename Rhs>
-		requires(	(((std::same_as<std::remove_cvref_t<Lhs>, Empty>) || (std::is_arithmetic_v<std::remove_cvref_t<Lhs>>))
-		&&			((std::same_as<std::remove_cvref_t<Rhs>, Empty>) || (std::is_arithmetic_v<std::remove_cvref_t<Rhs>>))) )
-		static constexpr decltype(auto)
-		VecOpOut(Op op, Lhs&& lhs, Rhs&& rhs)
-		{
-			constexpr auto lArith = std::is_arithmetic_v<std::remove_cvref_t<Lhs>>;
-			constexpr auto rArith = std::is_arithmetic_v<std::remove_cvref_t<Rhs>>;
-			constexpr auto lEmpty = std::same_as<std::remove_cvref_t<Lhs>, Empty>;
-			constexpr auto rEmpty = std::same_as<std::remove_cvref_t<Rhs>, Empty>;
-			if		constexpr(lArith && rArith) { return op(std::forward<Lhs>(lhs), std::forward<Rhs>(rhs)); }
-			else if	constexpr((lEmpty && rEmpty) || (PREFER_EMPTY && lArith) || (PREFER_EMPTY && rArith)) { return Empty{}; }
-			else if	constexpr(lArith && rEmpty) { return op(std::forward<Lhs>(lhs), static_cast<Lhs>(0)); }
-			else if	constexpr(lEmpty && rArith) { return op(static_cast<Lhs>(0), std::forward<Rhs>(rhs)); }
-		}
-		
-		template<bool PREFER_EMPTY = false, typename Lhs, typename Rhs, std::invocable<Lhs, Rhs> Op>
-		requires(!std::is_arithmetic_v<std::remove_cvref_t<Lhs>> || !std::is_arithmetic_v<std::remove_cvref_t<Rhs>>)
-		static constexpr decltype(auto)
-		VecOpOut(Op op, Lhs&& lhs, Rhs&& rhs)
-		{
-			if constexpr(PREFER_EMPTY && (std::same_as<std::remove_cvref_t<Lhs>, Empty> || std::same_as<std::remove_cvref_t<Rhs>, Empty>))
-			{ return Empty{}; }
-			else
-			{ return op(std::forward<Lhs>(lhs), std::forward<Rhs>(rhs)); }
-		}
-		
-		
-		
-		static constexpr decltype(auto) MULTIPLY =
-		[](auto&& lhs, auto&& rhs) constexpr -> decltype(auto) { return lhs * rhs; };
-		
-		template<typename LHS, typename RX, typename RY, typename RZ>
-		requires(
-			concepts::can_mul<LHS, RX>
-		&&	concepts::can_mul<LHS, RY>
-		&&	concepts::can_mul<LHS, RZ>)
-		static constexpr decltype(auto)
-		operator*(LHS const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(	concepts::can_mul<LHS, RX, true>
-		&&			concepts::can_mul<LHS, RY, true>
-		&&			concepts::can_mul<LHS, RZ, true>)
-		{ return ink::Vec(VecOpOut<true>(MULTIPLY, lhs, rhs.x), VecOpOut<true>(MULTIPLY, lhs, rhs.y), VecOpOut<true>(MULTIPLY, lhs, rhs.z)); }
-		
 	}
 	
 }
