@@ -575,7 +575,7 @@ namespace ink {
 		}
 		
 		template<bool PREFER_EMPTY = false, typename Lhs, typename Rhs, std::invocable<Lhs, Rhs> Op>
-		requires(PREFER_EMPTY || (!std::is_arithmetic_v<std::remove_cvref_t<Lhs>> || !std::is_arithmetic_v<std::remove_cvref_t<Rhs>>))
+		requires(!std::is_arithmetic_v<std::remove_cvref_t<Lhs>> || !std::is_arithmetic_v<std::remove_cvref_t<Rhs>>)
 		static constexpr decltype(auto)
 		VecOpOut(Op op, Lhs&& lhs, Rhs&& rhs)
 		{
@@ -584,6 +584,23 @@ namespace ink {
 			else
 			{ return op(std::forward<Lhs>(lhs), std::forward<Rhs>(rhs)); }
 		}
+		
+		
+		
+		static constexpr decltype(auto) MULTIPLY =
+		[](auto&& lhs, auto&& rhs) constexpr -> decltype(auto) { return lhs * rhs; };
+		
+		template<typename LHS, typename RX, typename RY, typename RZ>
+		requires(
+			concepts::can_mul<LHS, RX>
+		&&	concepts::can_mul<LHS, RY>
+		&&	concepts::can_mul<LHS, RZ>)
+		static constexpr decltype(auto)
+		operator*(LHS const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(	concepts::can_mul<LHS, RX, true>
+		&&			concepts::can_mul<LHS, RY, true>
+		&&			concepts::can_mul<LHS, RZ, true>)
+		{ return ink::Vec(VecOpOut<true>(MULTIPLY, lhs, rhs.x), VecOpOut<true>(MULTIPLY, lhs, rhs.y), VecOpOut<true>(MULTIPLY, lhs, rhs.z)); }
 		
 	}
 	
