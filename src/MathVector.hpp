@@ -1136,6 +1136,56 @@ namespace ink {
 		noexcept(OpConstraint_t<concepts::can_cmp_less_eq_t, LVec, RVec, true>{}())
 		{ return ink::Vec(lhs.x <= rhs.x, lhs.y <= rhs.y, lhs.z <= rhs.z); }
 		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			typename LVec = Vec<LX, LY, LZ>,
+			typename RVec = Vec<RX, RY, RZ>>
+		requires( OpConstraint_t<concepts::can_logical_and_t, LVec, RVec>{}() )
+		static constexpr decltype(auto)
+		operator&&(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_logical_and_t, LVec, RVec, true>{}())
+		{ return ink::Vec(lhs.x && rhs.x, lhs.y && rhs.y, lhs.z && rhs.z); }
+		
+		template<typename X, typename Y, typename Z, typename T, typename OVec = Vec<X, Y, Z>>
+		requires( OpConstraint_t<concepts::can_logical_and_t, OVec, T>{}() )
+		static constexpr decltype(auto)
+		operator&&(Vec<X, Y, Z> const& lhs, T const& rhs)
+		noexcept(OpConstraint_t<concepts::can_logical_and_t, OVec, T, true>{}())
+		{ return ink::Vec(lhs.x && rhs, lhs.y && rhs, lhs.z && rhs); }
+		
+		template<typename X, typename Y, typename Z, typename T, typename OVec = Vec<X, Y, Z>>
+		requires( OpConstraint_t<concepts::can_logical_and_t, T, OVec>{}() )
+		static constexpr decltype(auto)
+		operator&&(T const& lhs, Vec<X, Y, Z> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_logical_and_t, T, OVec, true>{}())
+		{ return ink::Vec(lhs && rhs.x, lhs && rhs.y, lhs && rhs.z); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			typename LVec = Vec<LX, LY, LZ>,
+			typename RVec = Vec<RX, RY, RZ>>
+		requires( OpConstraint_t<concepts::can_logical_or_t, LVec, RVec>{}() )
+		static constexpr decltype(auto)
+		operator||(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_logical_or_t, LVec, RVec, true>{}())
+		{ return ink::Vec(lhs.x || rhs.x, lhs.y || rhs.y, lhs.z || rhs.z); }
+		
+		template<typename X, typename Y, typename Z, typename T, typename OVec = Vec<X, Y, Z>>
+		requires( OpConstraint_t<concepts::can_logical_or_t, OVec, T>{}() )
+		static constexpr decltype(auto)
+		operator||(Vec<X, Y, Z> const& lhs, T const& rhs)
+		noexcept(OpConstraint_t<concepts::can_logical_or_t, OVec, T, true>{}())
+		{ return ink::Vec(lhs.x || rhs, lhs.y || rhs, lhs.z || rhs); }
+		
+		template<typename X, typename Y, typename Z, typename T, typename OVec = Vec<X, Y, Z>>
+		requires( OpConstraint_t<concepts::can_logical_or_t, T, OVec>{}() )
+		static constexpr decltype(auto)
+		operator||(T const& lhs, Vec<X, Y, Z> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_logical_or_t, T, OVec, true>{}())
+		{ return ink::Vec(lhs || rhs.x, lhs || rhs.y, lhs || rhs.z); }
+		
 	}
 	
 }
