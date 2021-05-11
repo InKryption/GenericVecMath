@@ -1059,6 +1059,83 @@ namespace ink {
 		noexcept(OpConstraint_t<concepts::can_sub_t, LVec, RVec, true>{}())
 		{ return ink::Vec(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z); }
 		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			typename LVec = Vec<LX, LY, LZ>,
+			typename RVec = Vec<RX, RY, RZ>>
+		requires( OpConstraint_t<concepts::can_cmp_eq_t, LVec, RVec>{}() )
+		static constexpr decltype(auto)
+		operator==(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_cmp_eq_t, LVec, RVec, true>{}())
+		{ return ink::Vec(lhs.x == rhs.x, lhs.y == rhs.y, lhs.z == rhs.z); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			typename LVec = Vec<LX, LY, LZ>,
+			typename RVec = Vec<RX, RY, RZ>>
+		requires( OpConstraint_t<concepts::can_cmp_neq_t, LVec, RVec>{}() )
+		static constexpr decltype(auto)
+		operator!=(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_cmp_neq_t, LVec, RVec, true>{}())
+		{ return ink::Vec(lhs.x != rhs.x, lhs.y != rhs.y, lhs.z != rhs.z); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			typename LVec = Vec<LX, LY, LZ>,
+			typename RVec = Vec<RX, RY, RZ>>
+		requires( OpConstraint_t<concepts::can_cmp_threeway_t, LVec, RVec>{}() )
+		static constexpr decltype(auto)
+		operator<=>(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_cmp_threeway_t, LVec, RVec, true>{}())
+		{ return ink::Vec(lhs.x <=> rhs.x, lhs.y <=> rhs.y, lhs.z <=> rhs.z); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			typename LVec = Vec<LX, LY, LZ>,
+			typename RVec = Vec<RX, RY, RZ>>
+		requires( OpConstraint_t<concepts::can_cmp_greater_t, LVec, RVec>{}() )
+		static constexpr decltype(auto)
+		operator>(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_cmp_neq_t, LVec, RVec, true>{}())
+		{ return ink::Vec(lhs.x > rhs.x, lhs.y > rhs.y, lhs.z > rhs.z); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			typename LVec = Vec<LX, LY, LZ>,
+			typename RVec = Vec<RX, RY, RZ>>
+		requires( OpConstraint_t<concepts::can_cmp_less_t, LVec, RVec>{}() )
+		static constexpr decltype(auto)
+		operator<(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_cmp_less_t, LVec, RVec, true>{}())
+		{ return ink::Vec(lhs.x < rhs.x, lhs.y < rhs.y, lhs.z < rhs.z); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			typename LVec = Vec<LX, LY, LZ>,
+			typename RVec = Vec<RX, RY, RZ>>
+		requires( OpConstraint_t<concepts::can_cmp_greater_eq_t, LVec, RVec>{}() )
+		static constexpr decltype(auto)
+		operator>=(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_cmp_greater_eq_t, LVec, RVec, true>{}())
+		{ return ink::Vec(lhs.x >= rhs.x, lhs.y >= rhs.y, lhs.z >= rhs.z); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			typename LVec = Vec<LX, LY, LZ>,
+			typename RVec = Vec<RX, RY, RZ>>
+		requires( OpConstraint_t<concepts::can_cmp_less_eq_t, LVec, RVec>{}() )
+		static constexpr decltype(auto)
+		operator<=(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_cmp_less_eq_t, LVec, RVec, true>{}())
+		{ return ink::Vec(lhs.x <= rhs.x, lhs.y <= rhs.y, lhs.z <= rhs.z); }
+		
 	}
 	
 }
