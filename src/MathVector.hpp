@@ -3,6 +3,7 @@
 
 #include <concepts>
 #include <utility>
+#include <tuple>
 #include <cmath>
 
 namespace ink {
@@ -314,7 +315,7 @@ namespace ink {
 		
 		/**
 		 * Phony target for various operations.
-		 * Should act as a compile-time entity; has no runtime state.
+		 * Should act as a compile-time entity, and should have no runtime state.
 		 */
 		struct NoState {
 			
@@ -834,41 +835,15 @@ namespace ink {
 			
 			
 			
-			public:
-			template<typename OX>
-			requires(std::convertible_to<OX, value_type_x> && !std::is_void_v<X> && std::constructible_from<base, OX, NoState, NoState>)
-			constexpr explicit
-			Vec(OX&& vx)
-			noexcept(noexcept(base(std::declval<OX>(), NoState{}, NoState{})))
-			: base(std::forward<OX>(vx), NoState{}, NoState{}) {}
-			
-			public:
-			template<typename OY>
-			requires(std::convertible_to<OY, value_type_y> && std::is_void_v<X> && !std::is_void_v<Y> && std::constructible_from<base, NoState, OY, NoState>)
-			constexpr explicit
-			Vec(OY&& vy)
-			noexcept(noexcept(base(NoState{}, std::declval<OY>(), NoState{})))
-			: base(NoState{}, std::forward<OY>(vy), NoState{}) {}
-			
-			public:
-			template<typename OZ>
-			requires(std::convertible_to<OZ, value_type_z> && std::is_void_v<X> && std::is_void_v<Y> && !std::is_void_v<Z> && std::constructible_from<base, NoState, NoState, OZ>)
-			constexpr explicit
-			Vec(OZ&& vz)
-			noexcept(noexcept(base(NoState{}, NoState{}, std::declval<OZ>())))
-			: base(NoState{}, NoState{}, std::forward<OZ>(vz)) {}
-			
-			
-			
-			// public: template<typename OX, typename OY, typename OZ>
-			// constexpr decltype(auto)
-			// operator=(Vec<OX, OY, OZ> const& other)
-			// requires(std::is_reference_v<X> || std::is_reference_v<Y> || std::is_reference_v<Z>)
-			// {
-			// 	this->x = static_cast<std::remove_reference_t<value_type_x>>(other.x);
-			// 	this->y = static_cast<std::remove_reference_t<value_type_y>>(other.y);
-			// 	this->z = static_cast<std::remove_reference_t<value_type_z>>(other.z);
-			// }
+			public: template<typename OX, typename OY, typename OZ>
+			constexpr decltype(auto)
+			operator=(Vec<OX, OY, OZ> const& other)
+			requires(std::is_reference_v<X> || std::is_reference_v<Y> || std::is_reference_v<Z>)
+			{
+				this->x = static_cast<std::remove_reference_t<value_type_x>>(other.x);
+				this->y = static_cast<std::remove_reference_t<value_type_y>>(other.y);
+				this->z = static_cast<std::remove_reference_t<value_type_z>>(other.z);
+			}
 			
 		};
 		
@@ -885,8 +860,8 @@ namespace ink {
 			std::conditional_t<(std::is_null_pointer_v<Y> || std::same_as<NoState, Y>), void, Y>, void
 		>;
 		
-		template<typename X>
-		Vec(X) -> Vec<std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<NoState, X>), void, X>, void, void>;
+		template<typename X, typename Y, typename Z>
+		Vec(Vec<X, Y, Z>) -> Vec<X, Y, Z>;
 		
 	}
 	
@@ -895,7 +870,173 @@ namespace ink {
 	
 	namespace generic_vec {
 		
+		template<typename Lhs, typename Rhs>
+		static constexpr decltype(auto)
+		DefaultToNoState(Lhs&& lhs, Rhs&& rhs) noexcept {
+			constexpr auto lNoState = std::same_as<std::remove_cvref_t<Lhs>, NoState>;
+			constexpr auto rNoState = std::same_as<std::remove_cvref_t<Rhs>, NoState>;
+			if constexpr(lNoState || rNoState)
+			{ return std::make_tuple(NoState(), NoState()); }
+			else
+			{ return std::tie(std::forward<Lhs>(lhs), std::forward<Rhs>(rhs)); }
+		}
 		
+		template<template<typename, typename, bool> typename Constraint, typename LHS, typename RHS, bool MustBeNoexcept = false>
+		struct OpConstraint_t: std::bool_constant<(Constraint<LHS, RHS, MustBeNoexcept>{}())> {};
+		
+		// Vectorial Operation.
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+		template<typename, typename, bool> typename Constraint, bool MustBeNoexcept>
+		struct OpConstraint_t<Constraint, Vec<LX, LY, LZ>, Vec<RX, RY, RZ>, MustBeNoexcept>:
+		std::bool_constant<(
+				Constraint<typename Vec<LX, LY, LZ>::value_type_x, typename Vec<RX, RY, RZ>::value_type_x, MustBeNoexcept>{}()
+			&&	Constraint<typename Vec<LX, LY, LZ>::value_type_y, typename Vec<RX, RY, RZ>::value_type_y, MustBeNoexcept>{}()
+			&&	Constraint<typename Vec<LX, LY, LZ>::value_type_z, typename Vec<RX, RY, RZ>::value_type_z, MustBeNoexcept>{}()
+		)> {};
+		
+		
+		// Scalar Operation. Scalar Right Hand Side.
+		template<typename LX, typename LY, typename LZ, typename RHS,
+		template<typename, typename, bool> typename Constraint, bool MustBeNoexcept>
+		requires(!concepts::same_template<RHS, Vec<void>>)
+		struct OpConstraint_t<Constraint, Vec<LX, LY, LZ>, RHS, MustBeNoexcept>:
+		std::bool_constant<(
+				Constraint<typename Vec<LX, LY, LZ>::value_type_x, RHS, MustBeNoexcept>{}()
+			&&	Constraint<typename Vec<LX, LY, LZ>::value_type_y, RHS, MustBeNoexcept>{}()
+			&&	Constraint<typename Vec<LX, LY, LZ>::value_type_z, RHS, MustBeNoexcept>{}()
+		)> {};
+		
+		// Scalar Operation. Scalar Left Hand Side.
+		template<typename RX, typename RY, typename RZ, typename LHS,
+		template<typename, typename, bool> typename Constraint, bool MustBeNoexcept>
+		requires(!concepts::same_template<LHS, Vec<void>>)
+		struct OpConstraint_t<Constraint, LHS, Vec<RX, RY, RZ>, MustBeNoexcept>:
+		std::bool_constant<(
+				Constraint<LHS, typename Vec<RX, RY, RZ>::value_type_x, MustBeNoexcept>{}()
+			&&	Constraint<LHS, typename Vec<RX, RY, RZ>::value_type_y, MustBeNoexcept>{}()
+			&&	Constraint<LHS, typename Vec<RX, RY, RZ>::value_type_z, MustBeNoexcept>{}()
+		)> {};
+		
+		
+		
+		template<typename X, typename Y, typename Z, typename T, typename OVec = Vec<X, Y, Z>>
+		requires( OpConstraint_t<concepts::can_mul_t, OVec, T>{}() )
+		static constexpr decltype(auto)
+		operator*(Vec<X, Y, Z> const& lhs, T const& rhs)
+		noexcept(OpConstraint_t<concepts::can_mul_t, OVec, T, true>{}()) {
+			auto&& [lx, rx] = DefaultToNoState(lhs.x, rhs);
+			auto&& [ly, ry] = DefaultToNoState(lhs.y, rhs);
+			auto&& [lz, rz] = DefaultToNoState(lhs.z, rhs);
+			return ink::Vec(lx * rx, ly * ry, lz * rz);
+		}
+		
+		template<typename X, typename Y, typename Z, typename T, typename OVec = Vec<X, Y, Z>>
+		requires( OpConstraint_t<concepts::can_mul_t, T, OVec>{}() )
+		static constexpr decltype(auto)
+		operator*(T const& lhs, Vec<X, Y, Z> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_mul_t, T, OVec, true>{}()) {
+			auto&& [lx, rx] = DefaultToNoState(lhs, rhs.x);
+			auto&& [ly, ry] = DefaultToNoState(lhs, rhs.y);
+			auto&& [lz, rz] = DefaultToNoState(lhs, rhs.z);
+			return ink::Vec(lx * rx, ly * ry, lz * rz);
+		}
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			typename LVec = Vec<LX, LY, LZ>,
+			typename RVec = Vec<RX, RY, RZ>>
+		requires( OpConstraint_t<concepts::can_mul_t, LVec, RVec>{}() )
+		static constexpr decltype(auto)
+		operator*(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_mul_t, LVec, RVec, true>{}())
+		{ return ink::Vec(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z); }
+		
+		
+		
+		template<typename X, typename Y, typename Z, typename T, typename OVec = Vec<X, Y, Z>>
+		requires( OpConstraint_t<concepts::can_div_t, OVec, T>{}() )
+		static constexpr decltype(auto)
+		operator/(Vec<X, Y, Z> const& lhs, T const& rhs)
+		noexcept(OpConstraint_t<concepts::can_div_t, OVec, T, true>{}()) {
+			auto&& [lx, rx] = DefaultToNoState(lhs.x, rhs);
+			auto&& [ly, ry] = DefaultToNoState(lhs.y, rhs);
+			auto&& [lz, rz] = DefaultToNoState(lhs.z, rhs);
+			return ink::Vec(lx / rx, ly / ry, lz / rz);
+		}
+		
+		template<typename X, typename Y, typename Z, typename T, typename OVec = Vec<X, Y, Z>>
+		requires( OpConstraint_t<concepts::can_div_t, T, OVec>{}() )
+		static constexpr decltype(auto)
+		operator/(T const& lhs, Vec<X, Y, Z> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_div_t, T, OVec, true>{}()) {
+			auto&& [lx, rx] = DefaultToNoState(lhs, rhs.x);
+			auto&& [ly, ry] = DefaultToNoState(lhs, rhs.y);
+			auto&& [lz, rz] = DefaultToNoState(lhs, rhs.z);
+			return ink::Vec(lx / rx, ly / ry, lz / rz);
+		}
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			typename LVec = Vec<LX, LY, LZ>,
+			typename RVec = Vec<RX, RY, RZ>>
+		requires( OpConstraint_t<concepts::can_div_t, LVec, RVec>{}() )
+		static constexpr decltype(auto)
+		operator/(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_div_t, LVec, RVec, true>{}())
+		{ return ink::Vec(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z); }
+		
+		
+		
+		template<typename X, typename Y, typename Z, typename T, typename OVec = Vec<X, Y, Z>>
+		requires( OpConstraint_t<concepts::can_mod_t, OVec, T>{}() )
+		static constexpr decltype(auto)
+		operator%(Vec<X, Y, Z> const& lhs, T const& rhs)
+		noexcept(OpConstraint_t<concepts::can_mod_t, OVec, T, true>{}()) {
+			auto&& [lx, rx] = DefaultToNoState(lhs.x, rhs);
+			auto&& [ly, ry] = DefaultToNoState(lhs.y, rhs);
+			auto&& [lz, rz] = DefaultToNoState(lhs.z, rhs);
+			return ink::Vec(lx % rx, ly % ry, lz % rz);
+		}
+		
+		template<typename X, typename Y, typename Z, typename T, typename OVec = Vec<X, Y, Z>>
+		requires( OpConstraint_t<concepts::can_mod_t, T, OVec>{}() )
+		static constexpr decltype(auto)
+		operator%(T const& lhs, Vec<X, Y, Z> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_mod_t, T, OVec, true>{}()) {
+			auto&& [lx, rx] = DefaultToNoState(lhs, rhs.x);
+			auto&& [ly, ry] = DefaultToNoState(lhs, rhs.y);
+			auto&& [lz, rz] = DefaultToNoState(lhs, rhs.z);
+			return ink::Vec(lx % rx, ly % ry, lz % rz);
+		}
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			typename LVec = Vec<LX, LY, LZ>,
+			typename RVec = Vec<RX, RY, RZ>>
+		requires( OpConstraint_t<concepts::can_mod_t, LVec, RVec>{}() )
+		static constexpr decltype(auto)
+		operator%(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_mod_t, LVec, RVec, true>{}())
+		{ return ink::Vec(lhs.x % rhs.x, lhs.y % rhs.y, lhs.z % rhs.z); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			typename LVec = Vec<LX, LY, LZ>,
+			typename RVec = Vec<RX, RY, RZ>>
+		requires( OpConstraint_t<concepts::can_add_t, LVec, RVec>{}() )
+		static constexpr decltype(auto)
+		operator+(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_add_t, LVec, RVec, true>{}())
+		{ return ink::Vec(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z); }
+		
+		
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ,
+			typename LVec = Vec<LX, LY, LZ>,
+			typename RVec = Vec<RX, RY, RZ>>
+		requires( OpConstraint_t<concepts::can_sub_t, LVec, RVec>{}() )
+		static constexpr decltype(auto)
+		operator-(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(OpConstraint_t<concepts::can_sub_t, LVec, RVec, true>{}())
+		{ return ink::Vec(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z); }
 		
 	}
 	
