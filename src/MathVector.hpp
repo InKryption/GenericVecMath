@@ -332,83 +332,86 @@ namespace ink {
 			value_type = std::remove_cvref_t<decltype(value)>;
 			
 			public: constexpr
-			NoState(std::nullptr_t = {})
+			NoState()
+			noexcept {}
+			
+			public: constexpr
+			NoState(std::nullptr_t)
 			noexcept {}
 			
 			public: constexpr
 			NoState(NoState const&)
 			noexcept {}
 			
-			public: template<typename T>
-			constexpr explicit
+			public: template<typename T> constexpr explicit
 			NoState(T)
 			noexcept {}
 			
 			public: template<std::default_initializable T>
 			constexpr explicit
-			operator T() const noexcept(noexcept(T()))
-			{ return T(); }
+			operator T() const
+			noexcept(noexcept(T{})) { return T{}; }
 			
 			
 			
 			public: friend constexpr decltype(auto)
-			operator++(NoState, int) noexcept
-			{ return NoState(); }
+			operator++(NoState, int)
+			noexcept { return NoState(); }
 			
 			public: friend constexpr decltype(auto)
-			operator--(NoState, int) noexcept
-			{ return NoState(); }
+			operator--(NoState, int)
+			noexcept { return NoState(); }
 			
 			public: friend constexpr decltype(auto)
-			operator++(NoState) noexcept
-			{ return NoState(); }
+			operator++(NoState)
+			noexcept { return NoState(); }
 			
 			public: friend constexpr decltype(auto)
-			operator--(NoState) noexcept
-			{ return NoState(); }
-			
-			
-			
-			public: friend constexpr decltype(auto)
-			operator~(NoState) noexcept
-			{ return NoState(); }
-			
-			public: friend constexpr decltype(auto)
-			operator!(NoState) noexcept
-			{ return NoState(); }
+			operator--(NoState)
+			noexcept { return NoState(); }
 			
 			
 			
 			public: friend constexpr decltype(auto)
-			operator+(NoState) noexcept
-			{ return NoState(); }
+			operator~(NoState)
+			noexcept { return NoState(); }
 			
 			public: friend constexpr decltype(auto)
-			operator-(NoState) noexcept
-			{ return NoState(); }
+			operator!(NoState)
+			noexcept { return NoState(); }
+			
+			
+			
+			public: friend constexpr decltype(auto)
+			operator+(NoState)
+			noexcept { return NoState(); }
+			
+			public: friend constexpr decltype(auto)
+			operator-(NoState)
+			noexcept { return NoState(); }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator*(NoState, T v) noexcept
-			{ return value * v; }
+			operator*(NoState, T v)
+			noexcept { return value * v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator*(T v, NoState) noexcept
-			{ return v * value; }
+			operator*(T v, NoState)
+			noexcept { return v * value; }
 			
 			public: friend constexpr decltype(auto)
-			operator*(NoState, NoState) noexcept
-			{ return NoState(); }
+			operator*(NoState, NoState)
+			noexcept { return NoState(); }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator/(NoState, T v) noexcept
-			{ return value / v; }
+			operator/(NoState, T v)
+			noexcept { return value / v; }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
@@ -416,267 +419,268 @@ namespace ink {
 			
 			public: template<std::floating_point T>
 			friend constexpr decltype(auto)
-			operator/(T v, NoState) noexcept(noexcept(v / (value_as<T>)))
+			operator/(T v, NoState)
+			noexcept(noexcept(v / (value_as<T>)))
 			{ return v / (value_as<T>); }
 			
 			public: friend constexpr decltype(auto)
-			operator/(NoState, NoState) noexcept
-			{ return NoState(); }
+			operator/(NoState, NoState)
+			noexcept { return NoState(); }
 			
 			
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator%(NoState, T v) noexcept
-			{ return value % v; }
+			operator%(NoState, T v)
+			noexcept { return value % v; }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
 			operator%(T, NoState) noexcept = delete;
 			
 			public: friend constexpr decltype(auto)
-			operator%(NoState, NoState) noexcept
-			{ return NoState(); }
+			operator%(NoState, NoState)
+			noexcept { return NoState(); }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator+(NoState, T v) noexcept
-			{ return value + v; }
+			operator+(NoState, T v)
+			noexcept { return value + v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator+(T v, NoState) noexcept
-			{ return v + value; }
+			operator+(T v, NoState)
+			noexcept { return v + value; }
 			
 			public: friend constexpr decltype(auto)
-			operator+(NoState, NoState) noexcept
-			{ return NoState(); }
+			operator+(NoState, NoState)
+			noexcept { return NoState(); }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator-(NoState, T v) noexcept
-			{ return value - v; }
+			operator-(NoState, T v)
+			noexcept { return value - v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator-(T v, NoState) noexcept
-			{ return v - value; }
+			operator-(T v, NoState)
+			noexcept { return v - value; }
 			
 			public: friend constexpr decltype(auto)
-			operator-(NoState, NoState) noexcept
-			{ return NoState(); }
+			operator-(NoState, NoState)
+			noexcept { return NoState(); }
 			
 			
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator<<(NoState, T) noexcept
-			{ return NoState(); }
+			operator<<(NoState, T)
+			noexcept { return NoState(); }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator<<(T v, NoState) noexcept
-			{ return v << value; }
+			operator<<(T v, NoState)
+			noexcept { return v << value; }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator<<(NoState, NoState) noexcept
-			{ return NoState(); }
+			operator<<(NoState, NoState)
+			noexcept { return NoState(); }
 			
 			
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator>>(NoState, T) noexcept
-			{ return NoState(); }
+			operator>>(NoState, T)
+			noexcept { return NoState(); }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator>>(T v, NoState) noexcept
-			{ return v >> value; }
+			operator>>(T v, NoState)
+			noexcept { return v >> value; }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator>>(NoState, NoState) noexcept
-			{ return NoState(); }
+			operator>>(NoState, NoState)
+			noexcept { return NoState(); }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator<=>(NoState, T v) noexcept
-			{ return value <=> v; }
+			operator<=>(NoState, T v)
+			noexcept { return value <=> v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator<=>(T v, NoState) noexcept
-			{ return v <=> value; }
+			operator<=>(T v, NoState)
+			noexcept { return v <=> value; }
 			
 			public: friend constexpr decltype(auto)
-			operator<=>(NoState, NoState) noexcept
-			{ return std::strong_ordering::equal; }
+			operator<=>(NoState, NoState)
+			noexcept { return std::strong_ordering::equal; }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator==(NoState, T v) noexcept
-			{ return value == v; }
+			operator==(NoState, T v)
+			noexcept { return value == v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator==(T v, NoState) noexcept
-			{ return v == value; }
+			operator==(T v, NoState)
+			noexcept { return v == value; }
 			
 			public: friend constexpr decltype(auto)
-			operator==(NoState, NoState) noexcept
-			{ return true; }
+			operator==(NoState, NoState)
+			noexcept { return true; }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator!=(NoState, T v) noexcept
-			{ return value != v; }
+			operator!=(NoState, T v)
+			noexcept { return value != v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator!=(T v, NoState) noexcept
-			{ return v != value; }
+			operator!=(T v, NoState)
+			noexcept { return v != value; }
 			
 			public: friend constexpr decltype(auto)
-			operator!=(NoState, NoState) noexcept
-			{ return false; }
+			operator!=(NoState, NoState)
+			noexcept { return false; }
 			
 			
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator&(NoState, T v) noexcept
-			{ return value & v; }
+			operator&(NoState, T v)
+			noexcept { return value & v; }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator&(T v, NoState) noexcept
-			{ return v & value; }
+			operator&(T v, NoState)
+			noexcept { return v & value; }
 			
 			public: friend constexpr decltype(auto)
-			operator&(NoState, NoState) noexcept
-			{ return NoState(); }
+			operator&(NoState, NoState)
+			noexcept { return NoState(); }
 			
 			
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator^(NoState, T v) noexcept
-			{ return value ^ v; }
+			operator^(NoState, T v)
+			noexcept { return value ^ v; }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator^(T v, NoState) noexcept
-			{ return v ^ value; }
+			operator^(T v, NoState)
+			noexcept { return v ^ value; }
 			
 			public: friend constexpr decltype(auto)
-			operator^(NoState, NoState) noexcept
-			{ return NoState(); }
+			operator^(NoState, NoState)
+			noexcept { return NoState(); }
 			
 			
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator|(NoState, T v) noexcept
-			{ return value | v; }
+			operator|(NoState, T v)
+			noexcept { return value | v; }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator|(T v, NoState) noexcept
-			{ return v | value; }
+			operator|(T v, NoState)
+			noexcept { return v | value; }
 			
 			public: friend constexpr decltype(auto)
-			operator|(NoState, NoState) noexcept
-			{ return NoState(); }
+			operator|(NoState, NoState)
+			noexcept { return NoState(); }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator&&(NoState, T v) noexcept
-			{ return value && v; }
+			operator&&(NoState, T v)
+			noexcept { return value && v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator&&(T v, NoState) noexcept
-			{ return v && value; }
+			operator&&(T v, NoState)
+			noexcept { return v && value; }
 			
 			public: friend constexpr decltype(auto)
-			operator&&(NoState, NoState) noexcept
-			{ return NoState(); }
+			operator&&(NoState, NoState)
+			noexcept { return NoState(); }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator||(NoState, T v) noexcept
-			{ return value || v; }
+			operator||(NoState, T v)
+			noexcept { return value || v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator||(T v, NoState) noexcept
-			{ return v || value; }
+			operator||(T v, NoState)
+			noexcept { return v || value; }
 			
 			public: friend constexpr decltype(auto)
-			operator||(NoState, NoState) noexcept
-			{ return NoState(); }
+			operator||(NoState, NoState)
+			noexcept { return NoState(); }
 			
 			
 			
 			public: constexpr decltype(auto)
-			operator=(auto&&) const noexcept
-			{ return *this; }
+			operator=(auto&&) const
+			noexcept { return *this; }
 			
 			public: constexpr decltype(auto)
-			operator*=(auto&&) const noexcept
-			{ return *this; }
+			operator*=(auto&&) const
+			noexcept { return *this; }
 			
 			public: constexpr decltype(auto)
-			operator/=(auto&&) const noexcept
-			{ return *this; }
+			operator/=(auto&&) const
+			noexcept { return *this; }
 			
 			public: constexpr decltype(auto)
-			operator%=(auto&&) const noexcept
-			{ return *this; }
+			operator%=(auto&&) const
+			noexcept { return *this; }
 			
 			public: constexpr decltype(auto)
-			operator+=(auto&&) const noexcept
-			{ return *this; }
+			operator+=(auto&&) const
+			noexcept { return *this; }
 			
 			public: constexpr decltype(auto)
-			operator-=(auto&&) const noexcept
-			{ return *this; }
+			operator-=(auto&&) const
+			noexcept { return *this; }
 			
 			public: constexpr decltype(auto)
-			operator>>=(auto&&) const noexcept
-			{ return *this; }
+			operator>>=(auto&&) const
+			noexcept { return *this; }
 			
 			public: constexpr decltype(auto)
-			operator<<=(auto&&) const noexcept
-			{ return *this; }
+			operator<<=(auto&&) const
+			noexcept { return *this; }
 			
 			public: constexpr decltype(auto)
-			operator&=(auto&&) const noexcept
-			{ return *this; }
+			operator&=(auto&&) const
+			noexcept { return *this; }
 			
 			public: constexpr decltype(auto)
-			operator^=(auto&&) const noexcept
-			{ return *this; }
+			operator^=(auto&&) const
+			noexcept { return *this; }
 			
 			public: constexpr decltype(auto)
-			operator|=(auto&&) const noexcept
-			{ return *this; }
+			operator|=(auto&&) const
+			noexcept { return *this; }
 			
 		};
 		
