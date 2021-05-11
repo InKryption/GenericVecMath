@@ -798,7 +798,7 @@ namespace ink {
 			
 			
 			
-			public: struct Initializer {
+			private: struct Initializer {
 				value_type_x&& x;
 				value_type_y&& y;
 				value_type_z&& z;
