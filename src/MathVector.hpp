@@ -796,22 +796,50 @@ namespace ink {
 			
 			public: using NoState = generic_vec::NoState;
 			
-			
-			
-			private: struct Initializer {
+			private: struct InitializerXYZ {
 				value_type_x&& x;
 				value_type_y&& y;
 				value_type_z&& z;
-				
-				public: constexpr
-				operator Vec() const noexcept
-				{ return Vec(std::forward<value_type_x>(x), std::forward<value_type_y>(y), std::forward<value_type_z>(z)); }
-				
+			};
+			
+			private: struct InitializerXY {
+				value_type_x&& x;
+				value_type_y&& y;
+			};
+			
+			private: struct InitializerXZ {
+				value_type_x&& x;
+				value_type_z&& z;
+			};
+			
+			private: struct InitializerYZ {
+				value_type_y&& y;
+				value_type_z&& z;
 			};
 			
 			public: constexpr
-			Vec(Initializer init):
-			base(init) {}
+			Vec(InitializerXYZ const& init):
+			base(	std::forward<value_type_x>(init.x),
+					std::forward<value_type_y>(init.y),
+					std::forward<value_type_z>(init.z)) {}
+			
+			public: constexpr
+			Vec(InitializerXY const& init) requires(std::is_void_v<Z>):
+			base(	std::forward<value_type_x>(init.x),
+					std::forward<value_type_y>(init.y),
+					NoState{}) {}
+			
+			public: constexpr
+			Vec(InitializerXZ const& init) requires(std::is_void_v<Y>):
+			base(	std::forward<value_type_x>(init.x),
+					NoState{},
+					std::forward<value_type_z>(init.z)) {}
+			
+			public: constexpr
+			Vec(InitializerYZ const& init) requires(std::is_void_v<X>):
+			base(	NoState{},
+					std::forward<value_type_y>(init.y),
+					std::forward<value_type_z>(init.z)) {}
 			
 			
 			
@@ -899,13 +927,6 @@ namespace ink {
 		
 		template<typename X, typename Y, typename Z>
 		Vec(X, Y, Z) -> Vec<
-			std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<NoState, X>), void, X>,
-			std::conditional_t<(std::is_null_pointer_v<Y> || std::same_as<NoState, Y>), void, Y>,
-			std::conditional_t<(std::is_null_pointer_v<Z> || std::same_as<NoState, Z>), void, Z>
-		>;
-		
-		template<typename X, typename Y, typename Z>
-		Vec(typename Vec<X, Y, Z>::Initializer) -> Vec<
 			std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<NoState, X>), void, X>,
 			std::conditional_t<(std::is_null_pointer_v<Y> || std::same_as<NoState, Y>), void, Y>,
 			std::conditional_t<(std::is_null_pointer_v<Z> || std::same_as<NoState, Z>), void, Z>

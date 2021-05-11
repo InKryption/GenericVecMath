@@ -6,9 +6,11 @@
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
 	constexpr
-	ink::Vec<int, void, int> v{{.x = 3, .y = nullptr, .z = 7ULL}};
+	ink::Vec<void, int, int> v{{.y = 3, .z = 7ULL}};
 	
-	printf("%i %llu %llu\n", v.x, v.y, v.z);
+	static_assert(v.x == 0);
+	static_assert(v.y == 3);
+	static_assert(v.z == 7);
 	
 	return 0;
 }
