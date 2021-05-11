@@ -796,51 +796,6 @@ namespace ink {
 			
 			public: using NoState = generic_vec::NoState;
 			
-			private: struct InitializerXYZ {
-				value_type_x&& x;
-				value_type_y&& y;
-				value_type_z&& z;
-			};
-			
-			private: struct InitializerXY {
-				value_type_x&& x;
-				value_type_y&& y;
-			};
-			
-			private: struct InitializerXZ {
-				value_type_x&& x;
-				value_type_z&& z;
-			};
-			
-			private: struct InitializerYZ {
-				value_type_y&& y;
-				value_type_z&& z;
-			};
-			
-			public: constexpr
-			Vec(InitializerXYZ const& init):
-			base(	std::forward<value_type_x>(init.x),
-					std::forward<value_type_y>(init.y),
-					std::forward<value_type_z>(init.z)) {}
-			
-			public: constexpr
-			Vec(InitializerXY const& init) requires(std::is_void_v<Z>):
-			base(	std::forward<value_type_x>(init.x),
-					std::forward<value_type_y>(init.y),
-					NoState{}) {}
-			
-			public: constexpr
-			Vec(InitializerXZ const& init) requires(std::is_void_v<Y>):
-			base(	std::forward<value_type_x>(init.x),
-					NoState{},
-					std::forward<value_type_z>(init.z)) {}
-			
-			public: constexpr
-			Vec(InitializerYZ const& init) requires(std::is_void_v<X>):
-			base(	NoState{},
-					std::forward<value_type_y>(init.y),
-					std::forward<value_type_z>(init.z)) {}
-			
 			
 			
 			public: constexpr
