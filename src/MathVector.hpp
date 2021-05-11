@@ -335,9 +335,13 @@ namespace ink {
 			NoState(std::nullptr_t = {})
 			noexcept {}
 			
+			public: constexpr
+			NoState(NoState const&)
+			noexcept {}
+			
 			public: template<typename T>
 			constexpr explicit
-			NoState(T&&)
+			NoState(T)
 			noexcept {}
 			
 			public: template<std::default_initializable T>
@@ -832,6 +836,19 @@ namespace ink {
 			Vec(OY&& vy, OZ&& vz)
 			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
 			: base(NoState{}, std::forward<OY>(vy), std::forward<OZ>(vz)) {}
+			
+			
+			
+			public:
+			template<typename OX, typename OY, typename OZ>
+			requires(
+					(std::convertible_to<OX, value_type_x> || std::is_void_v<OX> || std::is_void_v<X>)
+				&&	(std::convertible_to<OY, value_type_y> || std::is_void_v<OY> || std::is_void_v<Y>)
+				&&	(std::convertible_to<OZ, value_type_z> || std::is_void_v<OZ> || std::is_void_v<Z>) )
+			constexpr explicit
+			Vec(Vec<OX, OY, OZ> const& ovec)
+			noexcept(noexcept(base(static_cast<value_type_x>(ovec.x), static_cast<value_type_y>(ovec.y), static_cast<value_type_z>(ovec.z))))
+			: base(static_cast<value_type_x>(ovec.x), static_cast<value_type_y>(ovec.y), static_cast<value_type_z>(ovec.z)) {}
 			
 			
 			
