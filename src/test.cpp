@@ -5,9 +5,10 @@
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
 	
-	constexpr ink::Vec boolVec(3, -2, -4);
-	constexpr auto b = -boolVec;
+	constexpr
+	ink::Vec<int, void, int> v{{.x = 3, .y = nullptr, .z = 7ULL}};
 	
+	printf("%i %llu %llu\n", v.x, v.y, v.z);
 	
 	return 0;
 }

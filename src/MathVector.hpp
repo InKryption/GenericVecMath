@@ -798,8 +798,24 @@ namespace ink {
 			
 			
 			
-			public:
-			constexpr
+			public: struct Initializer {
+				value_type_x&& x;
+				value_type_y&& y;
+				value_type_z&& z;
+				
+				public: constexpr
+				operator Vec() const noexcept
+				{ return Vec(std::forward<value_type_x>(x), std::forward<value_type_y>(y), std::forward<value_type_z>(z)); }
+				
+			};
+			
+			public: constexpr
+			Vec(Initializer init):
+			base(init) {}
+			
+			
+			
+			public: constexpr
 			Vec()
 			noexcept(noexcept(base(NoState{}, NoState{}, NoState{})))
 			requires(std::constructible_from<base, NoState, NoState, NoState>)
@@ -807,8 +823,7 @@ namespace ink {
 			
 			
 			
-			public:
-			template<typename OX, typename OY, typename OZ>
+			public: template<typename OX, typename OY, typename OZ>
 			constexpr
 			Vec(OX&& vx, OY&& vy, OZ&& vz)
 			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
@@ -817,24 +832,21 @@ namespace ink {
 			
 			
 			
-			public:
-			template<typename OX, typename OY, typename OZ = NoState>
+			public: template<typename OX, typename OY, typename OZ = NoState>
 			requires(std::constructible_from<base, OX, OY, OZ>)
 			constexpr
 			Vec(OX&& vx, OY&& vy)
 			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
 			: base(std::forward<OX>(vx), std::forward<OY>(vy), NoState{}) {}
 			
-			public:
-			template<typename OX, typename OY = NoState, typename OZ>
+			public: template<typename OX, typename OY = NoState, typename OZ>
 			requires(std::constructible_from<base, OX, OY, OZ> && std::is_void_v<Y>)
 			constexpr
 			Vec(OX&& vx, OZ&& vz)
 			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
 			: base(std::forward<OX>(vx), NoState{}, std::forward<OZ>(vz)) {}
 			
-			public:
-			template<typename OX = NoState, typename OY, typename OZ>
+			public: template<typename OX = NoState, typename OY, typename OZ>
 			requires(std::constructible_from<base, OX, OY, OZ> && std::is_void_v<X> && !std::is_void_v<Z>)
 			constexpr
 			Vec(OY&& vy, OZ&& vz)
@@ -843,8 +855,7 @@ namespace ink {
 			
 			
 			
-			public:
-			template<typename OX, typename OY, typename OZ>
+			public: template<typename OX, typename OY, typename OZ>
 			requires(
 					(std::convertible_to<OX, value_type_x> || std::is_void_v<OX> || std::is_void_v<X>)
 				&&	(std::convertible_to<OY, value_type_y> || std::is_void_v<OY> || std::is_void_v<Y>)
@@ -888,6 +899,13 @@ namespace ink {
 		
 		template<typename X, typename Y, typename Z>
 		Vec(X, Y, Z) -> Vec<
+			std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<NoState, X>), void, X>,
+			std::conditional_t<(std::is_null_pointer_v<Y> || std::same_as<NoState, Y>), void, Y>,
+			std::conditional_t<(std::is_null_pointer_v<Z> || std::same_as<NoState, Z>), void, Z>
+		>;
+		
+		template<typename X, typename Y, typename Z>
+		Vec(typename Vec<X, Y, Z>::Initializer) -> Vec<
 			std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<NoState, X>), void, X>,
 			std::conditional_t<(std::is_null_pointer_v<Y> || std::same_as<NoState, Y>), void, Y>,
 			std::conditional_t<(std::is_null_pointer_v<Z> || std::same_as<NoState, Z>), void, Z>
