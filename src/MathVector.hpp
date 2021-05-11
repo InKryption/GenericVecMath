@@ -312,17 +312,31 @@ namespace ink {
 	
 	namespace generic_vec {
 		
-		struct Empty {
+		/**
+		 * Phony target for various operations.
+		 * Should act as a compile-time entity; has no runtime state.
+		 */
+		struct NoState {
 			
 			template<typename,typename,typename> friend class Vec;
-				
+			
+			public: static constexpr auto
+			value = 0;
+			
+			public: template<typename T>
+			static constexpr auto
+			value_as = static_cast<T>(value);
+			
+			public: using
+			value_type = std::remove_cvref_t<decltype(value)>;
+			
 			public: constexpr
-			Empty(std::nullptr_t = {})
+			NoState(std::nullptr_t = {})
 			noexcept {}
 			
 			public: template<typename T>
 			constexpr explicit
-			Empty(T&&)
+			NoState(T&&)
 			noexcept {}
 			
 			public: template<std::default_initializable T>
@@ -333,285 +347,285 @@ namespace ink {
 			
 			
 			public: friend constexpr decltype(auto)
-			operator++(Empty, int) noexcept
-			{ return Empty(); }
+			operator++(NoState, int) noexcept
+			{ return NoState(); }
 			
 			public: friend constexpr decltype(auto)
-			operator--(Empty, int) noexcept
-			{ return Empty(); }
+			operator--(NoState, int) noexcept
+			{ return NoState(); }
 			
 			public: friend constexpr decltype(auto)
-			operator++(Empty) noexcept
-			{ return Empty(); }
+			operator++(NoState) noexcept
+			{ return NoState(); }
 			
 			public: friend constexpr decltype(auto)
-			operator--(Empty) noexcept
-			{ return Empty(); }
-			
-			
-			
-			public: friend constexpr decltype(auto)
-			operator~(Empty) noexcept
-			{ return Empty(); }
-			
-			public: friend constexpr decltype(auto)
-			operator!(Empty) noexcept
-			{ return Empty(); }
+			operator--(NoState) noexcept
+			{ return NoState(); }
 			
 			
 			
 			public: friend constexpr decltype(auto)
-			operator+(Empty) noexcept
-			{ return Empty(); }
+			operator~(NoState) noexcept
+			{ return NoState(); }
 			
 			public: friend constexpr decltype(auto)
-			operator-(Empty) noexcept
-			{ return Empty(); }
+			operator!(NoState) noexcept
+			{ return NoState(); }
+			
+			
+			
+			public: friend constexpr decltype(auto)
+			operator+(NoState) noexcept
+			{ return NoState(); }
+			
+			public: friend constexpr decltype(auto)
+			operator-(NoState) noexcept
+			{ return NoState(); }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator*(Empty, T v) noexcept
-			{ return 0 * v; }
+			operator*(NoState, T v) noexcept
+			{ return value * v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator*(T v, Empty) noexcept
-			{ return v * 0; }
+			operator*(T v, NoState) noexcept
+			{ return v * value; }
 			
 			public: friend constexpr decltype(auto)
-			operator*(Empty, Empty) noexcept
-			{ return Empty(); }
+			operator*(NoState, NoState) noexcept
+			{ return NoState(); }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator/(Empty, T v) noexcept
-			{ return 0 / v; }
+			operator/(NoState, T v) noexcept
+			{ return value / v; }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator/(T, Empty) noexcept = delete;
+			operator/(T, NoState) noexcept = delete;
 			
 			public: template<std::floating_point T>
 			friend constexpr decltype(auto)
-			operator/(T v, Empty) noexcept
-			{ return v / 0.0; }
+			operator/(T v, NoState) noexcept(noexcept(v / (value_as<T>)))
+			{ return v / (value_as<T>); }
 			
 			public: friend constexpr decltype(auto)
-			operator/(Empty, Empty) noexcept
-			{ return Empty(); }
+			operator/(NoState, NoState) noexcept
+			{ return NoState(); }
 			
 			
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator%(Empty, T v) noexcept
-			{ return 0 % v; }
+			operator%(NoState, T v) noexcept
+			{ return value % v; }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator%(T, Empty) noexcept = delete;
+			operator%(T, NoState) noexcept = delete;
 			
 			public: friend constexpr decltype(auto)
-			operator%(Empty, Empty) noexcept
-			{ return Empty(); }
+			operator%(NoState, NoState) noexcept
+			{ return NoState(); }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator+(Empty, T v) noexcept
-			{ return 0 + v; }
+			operator+(NoState, T v) noexcept
+			{ return value + v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator+(T v, Empty) noexcept
-			{ return v + 0; }
+			operator+(T v, NoState) noexcept
+			{ return v + value; }
 			
 			public: friend constexpr decltype(auto)
-			operator+(Empty, Empty) noexcept
-			{ return Empty(); }
+			operator+(NoState, NoState) noexcept
+			{ return NoState(); }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator-(Empty, T v) noexcept
-			{ return 0 - v; }
+			operator-(NoState, T v) noexcept
+			{ return value - v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator-(T v, Empty) noexcept
-			{ return v - 0; }
+			operator-(T v, NoState) noexcept
+			{ return v - value; }
 			
 			public: friend constexpr decltype(auto)
-			operator-(Empty, Empty) noexcept
-			{ return Empty(); }
+			operator-(NoState, NoState) noexcept
+			{ return NoState(); }
 			
 			
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator<<(Empty, T v) noexcept
-			{ return Empty(); }
+			operator<<(NoState, T) noexcept
+			{ return NoState(); }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator<<(T v, Empty) noexcept
-			{ return v; }
+			operator<<(T v, NoState) noexcept
+			{ return v << value; }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator<<(Empty, Empty) noexcept
-			{ return Empty(); }
+			operator<<(NoState, NoState) noexcept
+			{ return NoState(); }
 			
 			
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator>>(Empty, T v) noexcept
-			{ return Empty(); }
+			operator>>(NoState, T) noexcept
+			{ return NoState(); }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator>>(T v, Empty) noexcept
-			{ return v; }
+			operator>>(T v, NoState) noexcept
+			{ return v >> value; }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator>>(Empty, Empty) noexcept
-			{ return Empty(); }
+			operator>>(NoState, NoState) noexcept
+			{ return NoState(); }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator<=>(Empty, T v) noexcept
-			{ return 0 <=> v; }
+			operator<=>(NoState, T v) noexcept
+			{ return value <=> v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator<=>(T v, Empty) noexcept
-			{ return v <=> 0; }
+			operator<=>(T v, NoState) noexcept
+			{ return v <=> value; }
 			
 			public: friend constexpr decltype(auto)
-			operator<=>(Empty, Empty) noexcept
-			{ return 0 <=> 0; }
+			operator<=>(NoState, NoState) noexcept
+			{ return std::strong_ordering::equal; }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator==(Empty, T v) noexcept
-			{ return 0 == v; }
+			operator==(NoState, T v) noexcept
+			{ return value == v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator==(T v, Empty) noexcept
-			{ return v == 0; }
+			operator==(T v, NoState) noexcept
+			{ return v == value; }
 			
 			public: friend constexpr decltype(auto)
-			operator==(Empty, Empty) noexcept
-			{ return 0 == 0; }
+			operator==(NoState, NoState) noexcept
+			{ return true; }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator!=(Empty, T v) noexcept
-			{ return 0 != v; }
+			operator!=(NoState, T v) noexcept
+			{ return value != v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator!=(T v, Empty) noexcept
-			{ return v != 0; }
+			operator!=(T v, NoState) noexcept
+			{ return v != value; }
 			
 			public: friend constexpr decltype(auto)
-			operator!=(Empty, Empty) noexcept
-			{ return 0 != 0; }
+			operator!=(NoState, NoState) noexcept
+			{ return false; }
 			
 			
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator&(Empty, T v) noexcept
-			{ return 0 & v; }
+			operator&(NoState, T v) noexcept
+			{ return value & v; }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator&(T v, Empty) noexcept
-			{ return v & 0; }
+			operator&(T v, NoState) noexcept
+			{ return v & value; }
 			
 			public: friend constexpr decltype(auto)
-			operator&(Empty, Empty) noexcept
-			{ return Empty(); }
+			operator&(NoState, NoState) noexcept
+			{ return NoState(); }
 			
 			
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator^(Empty, T v) noexcept
-			{ return 0 ^ v; }
+			operator^(NoState, T v) noexcept
+			{ return value ^ v; }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator^(T v, Empty) noexcept
-			{ return v ^ 0; }
+			operator^(T v, NoState) noexcept
+			{ return v ^ value; }
 			
 			public: friend constexpr decltype(auto)
-			operator^(Empty, Empty) noexcept
-			{ return Empty(); }
+			operator^(NoState, NoState) noexcept
+			{ return NoState(); }
 			
 			
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator|(Empty, T v) noexcept
-			{ return 0 | v; }
+			operator|(NoState, T v) noexcept
+			{ return value | v; }
 			
 			public: template<std::integral T>
 			friend constexpr decltype(auto)
-			operator|(T v, Empty) noexcept
-			{ return v | 0; }
+			operator|(T v, NoState) noexcept
+			{ return v | value; }
 			
 			public: friend constexpr decltype(auto)
-			operator|(Empty, Empty) noexcept
-			{ return Empty(); }
+			operator|(NoState, NoState) noexcept
+			{ return NoState(); }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator&&(Empty, T v) noexcept
-			{ return 0 && v; }
+			operator&&(NoState, T v) noexcept
+			{ return value && v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator&&(T v, Empty) noexcept
-			{ return v && 0; }
+			operator&&(T v, NoState) noexcept
+			{ return v && value; }
 			
 			public: friend constexpr decltype(auto)
-			operator&&(Empty, Empty) noexcept
-			{ return Empty(); }
+			operator&&(NoState, NoState) noexcept
+			{ return NoState(); }
 			
 			
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator||(Empty, T v) noexcept
-			{ return 0 || v; }
+			operator||(NoState, T v) noexcept
+			{ return value || v; }
 			
 			public: template<typename T> requires(std::is_arithmetic_v<T>)
 			friend constexpr decltype(auto)
-			operator||(T v, Empty) noexcept
-			{ return v || 0; }
+			operator||(T v, NoState) noexcept
+			{ return v || value; }
 			
 			public: friend constexpr decltype(auto)
-			operator||(Empty, Empty) noexcept
-			{ return Empty(); }
+			operator||(NoState, NoState) noexcept
+			{ return NoState(); }
 			
 			
 			
@@ -661,8 +675,6 @@ namespace ink {
 			
 		};
 		
-		
-		
 		namespace detail {
 			
 			enum class XYZ: size_t
@@ -673,9 +685,9 @@ namespace ink {
 			template<typename T> struct Member<T, XYZ::Y> { T y; };
 			template<typename T> struct Member<T, XYZ::Z> { T z; };
 			
-			template<> struct Member<void, XYZ::X> { static constexpr Empty x{}; };
-			template<> struct Member<void, XYZ::Y> { static constexpr Empty y{}; };
-			template<> struct Member<void, XYZ::Z> { static constexpr Empty z{}; };
+			template<> struct Member<void, XYZ::X> { static constexpr NoState x{}; };
+			template<> struct Member<void, XYZ::Y> { static constexpr NoState y{}; };
+			template<> struct Member<void, XYZ::Z> { static constexpr NoState z{}; };
 			
 			template<typename T, XYZ tag>
 			class Axis:
@@ -687,19 +699,20 @@ namespace ink {
 				
 				public:
 				constexpr explicit
-				Axis(Empty)
+				Axis(NoState)
 				noexcept( noexcept(base{}) )
 				requires( std::default_initializable<base> )
 				: base{} {}
 				
 				public:
 				template<typename U>
-				requires(!std::convertible_to<std::remove_cvref_t<U>, Empty>)
+				requires(!std::convertible_to<std::remove_cvref_t<U>, NoState>)
 				constexpr explicit
 				Axis(U&& u)
 				noexcept( noexcept(base{std::declval<U>()}) )
 				requires( requires(U uv) { base{uv}; } )
 				: base{std::forward<U>(u)} {}
+				
 			};
 			
 			template<std::size_t i, typename X, typename Y, typename Z>
@@ -722,6 +735,10 @@ namespace ink {
 				protected: using baseX = Axis<X, XYZ::X>;
 				protected: using baseY = Axis<Y, XYZ::Y>;
 				protected: using baseZ = Axis<Z, XYZ::Z>;
+				
+				protected: using value_type_x = decltype(baseX::x);
+				protected: using value_type_y = decltype(baseX::x);
+				protected: using value_type_z = decltype(baseX::x);
 				
 				private: using base0 = aligned_axis_at<0, X, Y, Z>;
 				private: using base1 = aligned_axis_at<1, X, Y, Z>;
@@ -768,16 +785,16 @@ namespace ink {
 			public: using value_type_y = decltype(Vec::y);
 			public: using value_type_z = decltype(Vec::z);
 			
-			public: using Empty = generic_vec::Empty;
+			public: using NoState = generic_vec::NoState;
 			
 			
 			
 			public:
 			constexpr
 			Vec()
-			noexcept(noexcept(base(Empty{}, Empty{}, Empty{})))
-			requires(std::constructible_from<base, Empty, Empty, Empty>)
-			: base(Empty{}, Empty{}, Empty{}) {}
+			noexcept(noexcept(base(NoState{}, NoState{}, NoState{})))
+			requires(std::constructible_from<base, NoState, NoState, NoState>)
+			: base(NoState{}, NoState{}, NoState{}) {}
 			
 			
 			
@@ -792,89 +809,89 @@ namespace ink {
 			
 			
 			public:
-			template<typename OX, typename OY, typename OZ = Empty>
+			template<typename OX, typename OY, typename OZ = NoState>
 			requires(std::constructible_from<base, OX, OY, OZ>)
 			constexpr
 			Vec(OX&& vx, OY&& vy)
 			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
-			: base(std::forward<OX>(vx), std::forward<OY>(vy), Empty{}) {}
+			: base(std::forward<OX>(vx), std::forward<OY>(vy), NoState{}) {}
 			
 			public:
-			template<typename OX, typename OY = Empty, typename OZ>
+			template<typename OX, typename OY = NoState, typename OZ>
 			requires(std::constructible_from<base, OX, OY, OZ> && std::is_void_v<Y>)
 			constexpr
 			Vec(OX&& vx, OZ&& vz)
 			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
-			: base(std::forward<OX>(vx), Empty{}, std::forward<OZ>(vz)) {}
+			: base(std::forward<OX>(vx), NoState{}, std::forward<OZ>(vz)) {}
 			
 			public:
-			template<typename OX = Empty, typename OY, typename OZ>
+			template<typename OX = NoState, typename OY, typename OZ>
 			requires(std::constructible_from<base, OX, OY, OZ> && std::is_void_v<X> && !std::is_void_v<Z>)
 			constexpr
 			Vec(OY&& vy, OZ&& vz)
 			noexcept(noexcept(base(std::declval<OX>(), std::declval<OY>(), std::declval<OZ>())))
-			: base(Empty{}, std::forward<OY>(vy), std::forward<OZ>(vz)) {}
+			: base(NoState{}, std::forward<OY>(vy), std::forward<OZ>(vz)) {}
 			
 			
 			
 			public:
 			template<typename OX>
-			requires(!std::is_void_v<X> && std::constructible_from<base, OX, Empty, Empty>)
+			requires(std::convertible_to<OX, value_type_x> && !std::is_void_v<X> && std::constructible_from<base, OX, NoState, NoState>)
 			constexpr explicit
 			Vec(OX&& vx)
-			noexcept(noexcept(base(std::declval<OX>(), Empty{}, Empty{})))
-			: base(std::forward<OX>(vx), Empty{}, Empty{}) {}
+			noexcept(noexcept(base(std::declval<OX>(), NoState{}, NoState{})))
+			: base(std::forward<OX>(vx), NoState{}, NoState{}) {}
 			
 			public:
 			template<typename OY>
-			requires(std::is_void_v<X> && !std::is_void_v<Y> && std::constructible_from<base, Empty, OY, Empty>)
+			requires(std::convertible_to<OY, value_type_y> && std::is_void_v<X> && !std::is_void_v<Y> && std::constructible_from<base, NoState, OY, NoState>)
 			constexpr explicit
 			Vec(OY&& vy)
-			noexcept(noexcept(base(Empty{}, std::declval<OY>(), Empty{})))
-			: base(Empty{}, std::forward<OY>(vy), Empty{}) {}
+			noexcept(noexcept(base(NoState{}, std::declval<OY>(), NoState{})))
+			: base(NoState{}, std::forward<OY>(vy), NoState{}) {}
 			
 			public:
 			template<typename OZ>
-			requires(std::is_void_v<X> && std::is_void_v<Y> && !std::is_void_v<Z> && std::constructible_from<base, Empty, Empty, OZ>)
+			requires(std::convertible_to<OZ, value_type_z> && std::is_void_v<X> && std::is_void_v<Y> && !std::is_void_v<Z> && std::constructible_from<base, NoState, NoState, OZ>)
 			constexpr explicit
 			Vec(OZ&& vz)
-			noexcept(noexcept(base(Empty{}, Empty{}, std::declval<OZ>())))
-			: base(Empty{}, Empty{}, std::forward<OZ>(vz)) {}
+			noexcept(noexcept(base(NoState{}, NoState{}, std::declval<OZ>())))
+			: base(NoState{}, NoState{}, std::forward<OZ>(vz)) {}
 			
 			
 			
-			public: template<typename OX, typename OY, typename OZ>
-			constexpr decltype(auto)
-			operator=(Vec<OX, OY, OZ> const& other)
-			requires(std::is_reference_v<X> || std::is_reference_v<Y> || std::is_reference_v<Z>)
-			{
-				this->x = static_cast<std::remove_reference_t<value_type_x>>(other.x);
-				this->y = static_cast<std::remove_reference_t<value_type_y>>(other.y);
-				this->z = static_cast<std::remove_reference_t<value_type_z>>(other.z);
-			}
+			// public: template<typename OX, typename OY, typename OZ>
+			// constexpr decltype(auto)
+			// operator=(Vec<OX, OY, OZ> const& other)
+			// requires(std::is_reference_v<X> || std::is_reference_v<Y> || std::is_reference_v<Z>)
+			// {
+			// 	this->x = static_cast<std::remove_reference_t<value_type_x>>(other.x);
+			// 	this->y = static_cast<std::remove_reference_t<value_type_y>>(other.y);
+			// 	this->z = static_cast<std::remove_reference_t<value_type_z>>(other.z);
+			// }
 			
 		};
 		
 		template<typename X, typename Y, typename Z>
 		Vec(X, Y, Z) -> Vec<
-			std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<Empty, X>), void, X>,
-			std::conditional_t<(std::is_null_pointer_v<Y> || std::same_as<Empty, Y>), void, Y>,
-			std::conditional_t<(std::is_null_pointer_v<Z> || std::same_as<Empty, Z>), void, Z>
+			std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<NoState, X>), void, X>,
+			std::conditional_t<(std::is_null_pointer_v<Y> || std::same_as<NoState, Y>), void, Y>,
+			std::conditional_t<(std::is_null_pointer_v<Z> || std::same_as<NoState, Z>), void, Z>
 		>;
 		
 		template<typename X, typename Y>
 		Vec(X, Y) -> Vec<
-			std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<Empty, X>), void, X>,
-			std::conditional_t<(std::is_null_pointer_v<Y> || std::same_as<Empty, Y>), void, Y>, void
+			std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<NoState, X>), void, X>,
+			std::conditional_t<(std::is_null_pointer_v<Y> || std::same_as<NoState, Y>), void, Y>, void
 		>;
 		
 		template<typename X>
-		Vec(X) -> Vec<std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<Empty, X>), void, X>, void, void>;
+		Vec(X) -> Vec<std::conditional_t<(std::is_null_pointer_v<X> || std::same_as<NoState, X>), void, X>, void, void>;
 		
 	}
 	
 	using generic_vec::Vec;
-	using generic_vec::Empty;
+	using generic_vec::NoState;
 	
 	namespace generic_vec {
 		
