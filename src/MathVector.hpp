@@ -5,6 +5,7 @@
 #include <utility>
 #include <tuple>
 #include <cmath>
+#include <functional>
 
 namespace ink {
 	
@@ -706,20 +707,18 @@ namespace ink {
 				private:
 				using base = Member<T, tag>;
 				
-				public:
-				constexpr explicit
+				public: constexpr explicit
 				Axis(NoState)
 				noexcept( noexcept(base{}) )
 				requires( std::default_initializable<base> )
 				: base{} {}
 				
-				public:
-				template<typename U>
-				requires(!std::convertible_to<std::remove_cvref_t<U>, NoState>)
+				public: template<typename U>
+				requires (!std::convertible_to<std::remove_cvref_t<U>, NoState>) &&
+					requires (U u) { {base{u}}; } 
 				constexpr explicit
 				Axis(U&& u)
 				noexcept( noexcept(base{std::declval<U>()}) )
-				requires( requires(U uv) { base{uv}; } )
 				: base{std::forward<U>(u)} {}
 				
 			};
@@ -774,6 +773,24 @@ namespace ink {
 				
 			};
 			
+		}
+		
+	}
+	
+	namespace generic_vec {
+		
+		template<typename X, typename Y, typename Z>
+		class Vec;
+		
+		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ, typename LVec = Vec<LX, LY, LZ>, typename RVec = Vec<RX, RY, RZ>>
+		requires (concepts::can_mul<LVec, RVec>)
+		&&	requires( decltype( std::declval<LVec>() * std::declval<RVec>() ) mul ) { {mul.x + mul.y + mul.z}; }
+		static constexpr decltype(auto)
+		dot(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
+		noexcept(concepts::can_mul<LVec, RVec, true> && noexcept(requires(decltype(std::declval<LVec>() * std::declval<RVec>()) vmul) { {vmul.x + vmul.y + vmul.z}; }) )
+		{
+			const auto&& vmul = lhs * rhs;
+			return vmul.x + vmul.y + vmul.z;
 		}
 		
 	}
@@ -850,21 +867,22 @@ namespace ink {
 			
 			
 			
+			template<typename OX, typename OY, typename OZ>
+			friend constexpr decltype(auto)
+			dot(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) noexcept(noexcept(generic_vec::dot(lhs, rhs)))
+			{ return ink::generic_vec::dot(lhs, rhs); }
+			
+			
+			
 			public: template<typename OX, typename OY, typename OZ>
 			constexpr decltype(auto)
-			operator=(Vec<OX, OY, OZ> const& other)
+			operator=(Vec<OX, OY, OZ> && other)
 			requires(std::is_reference_v<X> || std::is_reference_v<Y> || std::is_reference_v<Z>)
 			{
 				this->x = static_cast<std::remove_reference_t<value_type_x>>(other.x);
 				this->y = static_cast<std::remove_reference_t<value_type_y>>(other.y);
 				this->z = static_cast<std::remove_reference_t<value_type_z>>(other.z);
 			}
-			
-			public: friend constexpr decltype(auto)
-			operator!(Vec const& vec)
-			noexcept( noexcept(!vec.x) && noexcept(!vec.y) && noexcept(!vec.z) )
-			requires(concepts::can_logical_not<value_type_x> && concepts::can_logical_not<value_type_y> && concepts::can_logical_not<value_type_z>)
-			{ return generic_vec::Vec(!vec.x, !vec.y, !vec.z); }
 			
 			public: friend constexpr decltype(auto)
 			operator+(Vec const& vec)
@@ -877,6 +895,12 @@ namespace ink {
 			noexcept( noexcept(-vec.x) && noexcept(-vec.y) && noexcept(-vec.z) )
 			requires(concepts::can_unary_sub<value_type_x> && concepts::can_unary_sub<value_type_y> && concepts::can_unary_sub<value_type_z>)
 			{ return generic_vec::Vec(-vec.x, -vec.y, -vec.z); }
+			
+			public: friend constexpr decltype(auto)
+			operator!(Vec const& vec)
+			noexcept( noexcept(!vec.x) && noexcept(!vec.y) && noexcept(!vec.z) )
+			requires(concepts::can_logical_not<value_type_x> && concepts::can_logical_not<value_type_y> && concepts::can_logical_not<value_type_z>)
+			{ return generic_vec::Vec(!vec.x, !vec.y, !vec.z); }
 			
 		};
 		
