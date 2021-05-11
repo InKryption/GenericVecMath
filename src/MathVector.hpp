@@ -866,6 +866,24 @@ namespace ink {
 				this->z = static_cast<std::remove_reference_t<value_type_z>>(other.z);
 			}
 			
+			public: friend constexpr decltype(auto)
+			operator!(Vec const& vec)
+			noexcept( noexcept(!vec.x) && noexcept(!vec.y) && noexcept(!vec.z) )
+			requires(concepts::can_logical_not<value_type_x> && concepts::can_logical_not<value_type_y> && concepts::can_logical_not<value_type_z>)
+			{ return generic_vec::Vec(!vec.x, !vec.y, !vec.z); }
+			
+			public: friend constexpr decltype(auto)
+			operator+(Vec const& vec)
+			noexcept( noexcept(+vec.x) && noexcept(+vec.y) && noexcept(+vec.z) )
+			requires(concepts::can_unary_add<value_type_x> && concepts::can_unary_add<value_type_y> && concepts::can_unary_add<value_type_z>)
+			{ return generic_vec::Vec(+vec.x, +vec.y, +vec.z); }
+			
+			public: friend constexpr decltype(auto)
+			operator-(Vec const& vec)
+			noexcept( noexcept(-vec.x) && noexcept(-vec.y) && noexcept(-vec.z) )
+			requires(concepts::can_unary_sub<value_type_x> && concepts::can_unary_sub<value_type_y> && concepts::can_unary_sub<value_type_z>)
+			{ return generic_vec::Vec(-vec.x, -vec.y, -vec.z); }
+			
 		};
 		
 		template<typename X, typename Y, typename Z>
