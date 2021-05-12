@@ -782,15 +782,49 @@ namespace ink {
 		template<typename X, typename Y, typename Z>
 		class Vec;
 		
-		template<typename LX, typename LY, typename LZ, typename RX, typename RY, typename RZ, typename LVec = Vec<LX, LY, LZ>, typename RVec = Vec<RX, RY, RZ>>
-		requires (concepts::can_mul<LVec, RVec>)
-		&&	requires( decltype( std::declval<LVec>() * std::declval<RVec>() ) mul ) { {mul.x + mul.y + mul.z}; }
+		template<typename Lhs, typename Rhs>
 		static constexpr decltype(auto)
-		dot(Vec<LX, LY, LZ> const& lhs, Vec<RX, RY, RZ> const& rhs)
-		noexcept(concepts::can_mul<LVec, RVec, true> && noexcept(requires(decltype(std::declval<LVec>() * std::declval<RVec>()) vmul) { {vmul.x + vmul.y + vmul.z}; }) )
+		DefaultToNoState(Lhs&& lhs, Rhs&& rhs) noexcept {
+			constexpr auto lNoState = std::same_as<std::remove_cvref_t<Lhs>, NoState>;
+			constexpr auto rNoState = std::same_as<std::remove_cvref_t<Rhs>, NoState>;
+			if constexpr(lNoState || rNoState)
+			{ return std::make_tuple(NoState(), NoState()); }
+			else
+			{ return std::tie(std::forward<Lhs>(lhs), std::forward<Rhs>(rhs)); }
+		}
+		
+		template<typename LVec, typename RVec>
+		requires(requires(LVec l, RVec r)
+		{ {(l.x * r.x) + (l.y * r.y) + (l.z * r.z)}; })
+		static constexpr decltype(auto)
+		dot(LVec const& lhs, RVec const& rhs)
+		noexcept(requires(LVec l, RVec r) { {(l.x * r.x) + (l.y * r.y) + (l.z * r.z)} noexcept; })
+		{ return (lhs.x * rhs.x) + (lhs.y * rhs.y) + (lhs.z * rhs.z); }
+		
+		
+		
+		template<typename LVec, typename RVec>
+		requires requires(LVec l, RVec r)
+		{ {generic_vec::Vec{(l.y * r.z), (l.z * r.x), (l.x * r.y)}}; }
+		static constexpr decltype(auto)
+		cross(LVec const& lhs, RVec const& rhs)
+		noexcept(noexcept(generic_vec::Vec(lhs.y * rhs.z, lhs.z * rhs.x, lhs.x * rhs.y)))
 		{
-			const auto&& vmul = lhs * rhs;
-			return vmul.x + vmul.y + vmul.z;
+			auto&& x = (lhs.y * rhs.z) - (lhs.z * rhs.y);
+			auto&& y = (lhs.x * rhs.z) - (lhs.z * rhs.x);
+			auto&& z = (lhs.x * rhs.y) - (lhs.y * rhs.x);
+			return generic_vec::Vec(x, y, z);
+		}
+		
+		template<typename LVec, typename RVec>
+		requires requires(LVec l, RVec r)
+		{ {generic_vec::Vec{nullptr, nullptr, (l.x * r.y)}}; }
+		static constexpr decltype(auto)
+		cross(LVec const& lhs, RVec const& rhs)
+		noexcept(noexcept(generic_vec::Vec(nullptr, nullptr, (lhs.x * rhs.y))))
+		{
+			auto&& z = (lhs.x * rhs.y) - (lhs.y * rhs.x);
+			return generic_vec::Vec(nullptr, nullptr, z);
 		}
 		
 	}
@@ -872,6 +906,11 @@ namespace ink {
 			dot(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) noexcept(noexcept(generic_vec::dot(lhs, rhs)))
 			{ return ink::generic_vec::dot(lhs, rhs); }
 			
+			template<typename OX, typename OY, typename OZ>
+			friend constexpr decltype(auto)
+			cross(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) noexcept(noexcept(generic_vec::dot(lhs, rhs)))
+			{ return ink::generic_vec::cross(lhs, rhs); }
+			
 			
 			
 			public: template<typename OX, typename OY, typename OZ>
@@ -925,18 +964,10 @@ namespace ink {
 	using generic_vec::Vec;
 	using generic_vec::NoState;
 	
+	using generic_vec::dot;
+	using generic_vec::cross;
+	
 	namespace generic_vec {
-		
-		template<typename Lhs, typename Rhs>
-		static constexpr decltype(auto)
-		DefaultToNoState(Lhs&& lhs, Rhs&& rhs) noexcept {
-			constexpr auto lNoState = std::same_as<std::remove_cvref_t<Lhs>, NoState>;
-			constexpr auto rNoState = std::same_as<std::remove_cvref_t<Rhs>, NoState>;
-			if constexpr(lNoState || rNoState)
-			{ return std::make_tuple(NoState(), NoState()); }
-			else
-			{ return std::tie(std::forward<Lhs>(lhs), std::forward<Rhs>(rhs)); }
-		}
 		
 		template<template<typename, typename, bool> typename Constraint, typename LHS, typename RHS, bool MustBeNoexcept = false>
 		struct OpConstraint_t: std::bool_constant<(Constraint<LHS, RHS, MustBeNoexcept>{}())> {};
