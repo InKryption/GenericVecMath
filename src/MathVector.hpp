@@ -793,12 +793,14 @@ namespace ink {
 			{ return std::tie(std::forward<Lhs>(lhs), std::forward<Rhs>(rhs)); }
 		}
 		
+		
+		
 		template<typename LVec, typename RVec>
 		requires(requires(LVec l, RVec r)
 		{ {(l.x * r.x) + (l.y * r.y) + (l.z * r.z)}; })
 		static constexpr decltype(auto)
 		dot(LVec const& lhs, RVec const& rhs)
-		noexcept(requires(LVec l, RVec r) { {(l.x * r.x) + (l.y * r.y) + (l.z * r.z)} noexcept; })
+		noexcept( requires(LVec l, RVec r) { {(l.x * r.x) + (l.y * r.y) + (l.z * r.z)} noexcept; } )
 		{ return (lhs.x * rhs.x) + (lhs.y * rhs.y) + (lhs.z * rhs.z); }
 		
 		
@@ -808,23 +810,11 @@ namespace ink {
 		{ {generic_vec::Vec{(l.y * r.z), (l.z * r.x), (l.x * r.y)}}; }
 		static constexpr decltype(auto)
 		cross(LVec const& lhs, RVec const& rhs)
-		noexcept(noexcept(generic_vec::Vec(lhs.y * rhs.z, lhs.z * rhs.x, lhs.x * rhs.y)))
-		{
+		noexcept(noexcept( generic_vec::Vec(lhs.y * rhs.z, lhs.z * rhs.x, lhs.x * rhs.y) )) {
 			auto&& x = (lhs.y * rhs.z) - (lhs.z * rhs.y);
 			auto&& y = (lhs.x * rhs.z) - (lhs.z * rhs.x);
 			auto&& z = (lhs.x * rhs.y) - (lhs.y * rhs.x);
-			return generic_vec::Vec(x, y, z);
-		}
-		
-		template<typename LVec, typename RVec>
-		requires requires(LVec l, RVec r)
-		{ {generic_vec::Vec{nullptr, nullptr, (l.x * r.y)}}; }
-		static constexpr decltype(auto)
-		cross(LVec const& lhs, RVec const& rhs)
-		noexcept(noexcept(generic_vec::Vec(nullptr, nullptr, (lhs.x * rhs.y))))
-		{
-			auto&& z = (lhs.x * rhs.y) - (lhs.y * rhs.x);
-			return generic_vec::Vec(nullptr, nullptr, z);
+			return generic_vec::Vec(x, -y, z);
 		}
 		
 	}
