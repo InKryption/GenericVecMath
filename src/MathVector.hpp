@@ -490,30 +490,6 @@ namespace ink {
 			{ return std::tie(std::forward<Lhs>(lhs), std::forward<Rhs>(rhs)); }
 		}
 		
-		
-		
-		template<typename LVec, typename RVec>
-		requires(requires(LVec l, RVec r)
-		{ {(l.x * r.x) + (l.y * r.y) + (l.z * r.z)}; })
-		static constexpr decltype(auto)
-		dot(LVec const& lhs, RVec const& rhs)
-		noexcept( requires(LVec l, RVec r) { {(l.x * r.x) + (l.y * r.y) + (l.z * r.z)} noexcept; } )
-		{ return (lhs.x * rhs.x) + (lhs.y * rhs.y) + (lhs.z * rhs.z); }
-		
-		
-		
-		template<typename LVec, typename RVec>
-		requires requires(LVec l, RVec r)
-		{ {generic_vec::Vec{(l.y * r.z), (l.z * r.x), (l.x * r.y)}}; }
-		static constexpr decltype(auto)
-		cross(LVec const& lhs, RVec const& rhs)
-		noexcept(noexcept( generic_vec::Vec(lhs.y * rhs.z, lhs.z * rhs.x, lhs.x * rhs.y) )) {
-			auto&& x = (lhs.y * rhs.z) - (lhs.z * rhs.y);
-			auto&& y = (lhs.x * rhs.z) - (lhs.z * rhs.x);
-			auto&& z = (lhs.x * rhs.y) - (lhs.y * rhs.x);
-			return generic_vec::Vec(x, -y, z);
-		}
-		
 	}
 	
 	namespace generic_vec {
@@ -588,15 +564,50 @@ namespace ink {
 			
 			
 			
-			template<typename OX, typename OY, typename OZ>
-			friend constexpr decltype(auto)
-			dot(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) noexcept(noexcept(generic_vec::dot(lhs, rhs)))
-			{ return ink::generic_vec::dot(lhs, rhs); }
+			// Returns the dot product of this and the rhs vector.
+			template<typename OX, typename OY, typename OZ, typename RVec = Vec<OX, OY, OZ>>
+			requires requires(value_type_x lx, value_type_y ly, value_type_z lz, RVec r) { {lx * r.x}; {ly * r.y}; {lz * r.z}; }
+			constexpr decltype(auto)
+			dot(Vec<OX, OY, OZ> const& rhs) const
+			noexcept( requires(value_type_x lx, value_type_y ly, value_type_z lz, RVec r) { {lx * r.x} noexcept; {ly * r.y} noexcept; {lz * r.z} noexcept; } )
+			{ return (this->x * rhs.x) + (this->y * rhs.y) + (this->z * rhs.z); }
 			
-			template<typename OX, typename OY, typename OZ>
-			friend constexpr decltype(auto)
-			cross(Vec const& lhs, Vec<OX, OY, OZ> const& rhs) noexcept(noexcept(generic_vec::dot(lhs, rhs)))
-			{ return ink::generic_vec::cross(lhs, rhs); }
+			// Returns the cross product of this and the rhs vector.
+			template<typename RX, typename RY, typename RZ, typename RVec = Vec<RX, RY, RZ>>
+			requires requires(value_type_x lx, value_type_x ly, value_type_x lz, RVec r) { {generic_vec::Vec((ly * r.z), -(lz * r.x), (lx * r.y))}; }
+			constexpr decltype(auto)
+			cross(Vec<RX, RY, RZ> const& rhs) const {
+				
+				auto&& [lxc, rxc] = [&]() {
+					auto&& [ly, rz] = DefaultToNoState(this->y, rhs.z);
+					auto&& [lz, ry] = DefaultToNoState(this->z, rhs.y);
+					return std::make_tuple(ly * rz, lz * ry);
+				}();
+				
+				auto&& [lyc, ryc] = [&]() {
+					auto&& [lx, rz] = DefaultToNoState(this->x, rhs.z);
+					auto&& [lz, rx] = DefaultToNoState(this->z, rhs.x);
+					return std::make_tuple(lx * rz, lz * rx);
+				}();
+				
+				auto&& [lzc, rzc] = [&]() {
+					auto&& [lx, ry] = DefaultToNoState(this->x, rhs.y);
+					auto&& [ly, rx] = DefaultToNoState(this->y, rhs.x);
+					return std::make_tuple(lx * ry, ly * rx);
+				}();
+				
+				auto&& x = lxc - rxc;
+				auto&& y = lyc - ryc;
+				auto&& z = lzc - rzc;
+				
+				return generic_vec::Vec(x, -y, z);
+			}
+			
+			// Returns the magnitude of the vector squared. Cheaper than directly getting the magnitude.
+			constexpr decltype(auto)
+			mag2() const
+			noexcept(requires(Vec<X, Y, Z> const& v) { {v.dot(v)} noexcept; })
+			{ return dot(*this); }
 			
 			
 			
@@ -650,9 +661,6 @@ namespace ink {
 	
 	using generic_vec::Vec;
 	using generic_vec::NoState;
-	
-	using generic_vec::dot;
-	using generic_vec::cross;
 	
 	namespace generic_vec {
 		
