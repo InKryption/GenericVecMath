@@ -5,9 +5,13 @@
 
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[]) {
-	using std::numbers::sqrt2;
-	constinit static int m = 3;
-	printf("%f\n", std::sqrt(ink::Vec{sqrt2,sqrt2}.mag2()) );
+	
+	int x, y;
+	ink::Vec<int&, int&, void> m(x,y);
+	
+	m = ink::Vec(1,2);
+	
+	printf("%i %i\n", x, y);
 	
 	return 0;
 }

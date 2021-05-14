@@ -4,6 +4,7 @@
 #include <concepts>
 #include <utility>
 #include <tuple>
+#include <cstdint>
 #include <cmath>
 #include "Concepts.hpp"
 
@@ -412,7 +413,7 @@ namespace ink {
 				
 				public: template<typename U>
 				requires (!std::convertible_to<std::remove_cvref_t<U>, NoState>) &&
-					requires (U u) { {base{u}}; } 
+				requires (U u) { {base{u}}; } 
 				constexpr explicit
 				Axis(U&& u)
 				noexcept( noexcept(base{std::declval<U>()}) )
@@ -553,7 +554,7 @@ namespace ink {
 			
 			
 			public: template<typename OX, typename OY, typename OZ>
-			requires(
+			requires (
 					(std::convertible_to<OX, value_type_x> || std::is_void_v<OX> || std::is_void_v<X>)
 				&&	(std::convertible_to<OY, value_type_y> || std::is_void_v<OY> || std::is_void_v<Y>)
 				&&	(std::convertible_to<OZ, value_type_z> || std::is_void_v<OZ> || std::is_void_v<Z>) )
@@ -612,9 +613,9 @@ namespace ink {
 			
 			
 			public: template<typename OX, typename OY, typename OZ>
+			requires (std::is_reference_v<X> || std::is_reference_v<Y> || std::is_reference_v<Z>)
 			constexpr decltype(auto)
 			operator=(Vec<OX, OY, OZ> && other)
-			requires(std::is_reference_v<X> || std::is_reference_v<Y> || std::is_reference_v<Z>)
 			{
 				this->x = static_cast<std::remove_reference_t<value_type_x>>(other.x);
 				this->y = static_cast<std::remove_reference_t<value_type_y>>(other.y);
