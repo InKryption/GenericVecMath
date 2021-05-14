@@ -613,7 +613,7 @@ namespace ink {
 			
 			
 			public: template<typename OX, typename OY, typename OZ>
-			requires (std::is_reference_v<X> || std::is_reference_v<Y> || std::is_reference_v<Z>)
+			require(std::is_reference_v<X> || std::is_reference_v<Y> || std::is_reference_v<Z>)
 			constexpr decltype(auto)
 			operator=(Vec<OX, OY, OZ> && other)
 			{
