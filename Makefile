@@ -57,7 +57,7 @@ $(foreach src,$(SOURCE_FILES),$(eval $(call Compile_Source,$(src))))
 
 
 # Utility Targets:
-.PHONY: clean dir run help builds
+.PHONY: clean dir run
 
 # Run the executable via powershell
 run: $(EXECUTABLE)
@@ -69,5 +69,4 @@ dir:
 
 # Clean output
 clean:
-	@rm $(DIRTY_OBJECTS)
-	@echo Removed $(if $(foreach do,$(DIRTY_OBJECTS),'$(do)'),$(foreach do,$(DIRTY_OBJECTS),'$(do)'),nothing)
+	$(foreach objfile,$(DIRTY_OBJECTS),@if [ -f "$(objfile)" ]; then rm $(objfile); echo "Removed $(objfile)"; fi)
